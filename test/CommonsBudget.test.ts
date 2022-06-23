@@ -50,4 +50,15 @@ describe("Test of Commons Budget Contract", () => {
         const systemProposalFe = await contract.getSystemProposalFee();
         assert.deepStrictEqual(systemProposalFe.toString(), "500000000000000000000");
     });
+
+    it("Check Quorum Factor", async () => {
+        const factor = await contract.getVoteQuorumFactor();
+        assert.deepStrictEqual(factor, 333333);
+    });
+
+    it("Set Quorum Factor", async () => {
+        await contract.connect(admin_signer).setVoteQuorumFactor(200000);
+        const factor = await contract.getVoteQuorumFactor();
+        assert.deepStrictEqual(factor, 200000);
+    });
 });
