@@ -10,7 +10,8 @@
     "clean": "node_modules/.bin/hardhat clean",
     "build": "node_modules/.bin/hardhat compile",
     "test": "node_modules/.bin/hardhat test",
-    "test:CommonsBudget": "NODE_ENV=test node_modules/.bin/hardhat test test/CommonsBudget.test.ts"
+    "test:CommonsBudget": "NODE_ENV=test node_modules/.bin/hardhat test test/CommonsBudget.test.ts",
+    "prettier": "node_modules/.bin/prettier --write --config .prettierrc 'contracts/**/*.sol' 'test/**/*.ts'"
   },
   "repository": {
     "type": "git+https://github.com/zeroone-boa/commons-budget-contract.git",
