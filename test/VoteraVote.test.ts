@@ -59,7 +59,7 @@ describe("VoteraVote", function () {
         // change parameter of voteraVote
         voteBudget = CommonsBudgetFactory.connect(budget.address, voteManager);
 
-        await voteraVote.changeBudget(budget.address);
+        await voteraVote.changeCommonBudgetContract(budget.address);
 
         // change parameter of budget
         const changeParamTx = await budget.changeVoteParam(voteManager.address, voteraVote.address);
@@ -101,7 +101,7 @@ describe("VoteraVote", function () {
     it("Check VoteraVote normal lifecycle", async function () {
         expect(await voteraVote.getManager()).to.be.equal(voteManager.address);
         const voteInfo = await voteraVote.voteInfos(proposal);
-        expect(voteInfo.budget).equal(budget.address);
+        expect(voteInfo.commonsBudgetAddress).equal(budget.address);
 
         const blockLatest = await ethers.provider.getBlock("latest");
         const startTime = blockLatest.timestamp + 86400; // 1 day
@@ -154,7 +154,7 @@ describe("VoteraVote", function () {
             submitBallotTx = await ballotVote.submitBallot(proposal, commitment, signature);
         }
 
-        expect(await voteraVote.ballotCount(proposal)).equal(voterCount);
+        expect(await voteraVote.getVoterCount(proposal)).equal(voterCount);
 
         if (submitBallotTx) {
             await submitBallotTx.wait();
@@ -195,12 +195,12 @@ describe("VoteraVote", function () {
 
         // check vote result
         const validatorCount = await voteraVote.getValidatorCount(proposal);
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
+        const voteResult = await voteraVote.getVoteResult(proposal);
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(expectVoteCounts[i]);
+            expect(voteResult[i]).equal(expectVoteCounts[i]);
         }
 
-        const finishVoteTx = await voteBudget.finishVote(proposal, validatorCount, voteCounts);
+        const finishVoteTx = await voteBudget.finishVote(proposal, validatorCount, voteResult);
         await finishVoteTx.wait();
 
         displayBalance(voteManager.address, "end_");
@@ -208,25 +208,25 @@ describe("VoteraVote", function () {
         const proposalData = await voteBudget.getProposalData(proposal);
         expect(proposalData.validatorSize).equal(validatorCount);
         for (let i = 0; i < 3; i += 1) {
-            expect(proposalData.voteCounts[i]).equal(BigNumber.from(voteCounts[i]));
+            expect(proposalData.voteResult[i]).equal(BigNumber.from(voteResult[i]));
         }
     });
 
-    it("changeBudget", async () => {
-        expect(await voteraVote.budget()).equal(budget.address);
+    it("changeCommonBudgetContract", async () => {
+        expect(await voteraVote.commonsBudgetAddress()).equal(budget.address);
     });
 
-    it("changeBudget: Ownable: caller is not the owner", async () => {
+    it("changeCommonBudgetContract: Ownable: caller is not the owner", async () => {
         const invalidCaller = deployer;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
-        await expect(invalidCallerVote.changeBudget(deployer.address)).to.be.revertedWith(
+        await expect(invalidCallerVote.changeCommonBudgetContract(deployer.address)).to.be.revertedWith(
             "Ownable: caller is not the owner"
         );
     });
 
-    it("changeBudget: E001", async () => {
+    it("changeCommonBudgetContract: E001", async () => {
         const invalidValue = AddressZero;
-        await expect(voteraVote.changeBudget(invalidValue)).to.be.revertedWith("E001");
+        await expect(voteraVote.changeCommonBudgetContract(invalidValue)).to.be.revertedWith("E001");
     });
 
     it("init: E000", async () => {
@@ -248,7 +248,6 @@ describe("VoteraVote", function () {
         expect(voteInfo.endVote).equals(endTime);
         expect(voteInfo.openVote).equals(openTime);
         expect(voteInfo.info).equals("info");
-        expect(voteInfo.revealCount).equals(0);
         expect(voteInfo.finishVote).equals(false);
     });
 
@@ -411,7 +410,7 @@ describe("VoteraVote", function () {
         const ballotVote = VoteraVoteFactory.connect(voteAddress, validators[0]);
         await ballotVote.submitBallot(proposal, commitment, signature);
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(1));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(1));
 
         const ballot = await ballotVote.myBallot(proposal);
         expect(ballot.key).equal(validators[0].address);
@@ -426,7 +425,7 @@ describe("VoteraVote", function () {
         const ballotVote1 = VoteraVoteFactory.connect(voteAddress, validators[1]);
         await ballotVote1.submitBallot(proposal, commitment1, signature1);
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(2));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(2));
 
         const ballot1 = await ballotVote1.myBallot(proposal);
         expect(ballot1.key).equal(validators[1].address);
@@ -442,8 +441,8 @@ describe("VoteraVote", function () {
 
         await ballotVote.submitBallot(proposal, newCommitment, newSignature);
 
-        // confirm ballotCount not changed
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(2));
+        // confirm getVoterCount not changed
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(2));
         const ballotChanged = await ballotVote.myBallot(proposal);
         expect(ballotChanged.key).equal(validators[0].address);
         expect(ballotChanged.choice).equal(BigNumber.from(0));
@@ -645,7 +644,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voteCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voteCount));
 
         for (let i = 0; i < voteCount; i += 1) {
             const ballot = await voteraVote.getBallotAtIndex(proposal, i);
@@ -695,7 +694,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voteCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voteCount));
 
         const ballot = await voteraVote.getBallotAtIndex(proposal, 0);
         expect(ballot.key).equal(validators[0].address);
@@ -782,7 +781,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voterCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voterCount));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
@@ -856,7 +855,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voterCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voterCount));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
@@ -926,7 +925,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voterCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voterCount));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
@@ -976,7 +975,7 @@ describe("VoteraVote", function () {
         await expect(voteraVote.revealBallot(proposal, keys, choices, nonces)).to.be.revertedWith("E004");
     });
 
-    it("registerResult&getVoteCounts", async () => {
+    it("registerResult&getVoteResult", async () => {
         const blockLatest = await ethers.provider.getBlock("latest");
         const startTime = blockLatest.timestamp + 86400; // 1 day
         const endTime = startTime + 86400; // 1 day
@@ -1018,7 +1017,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voterCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voterCount));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
@@ -1028,14 +1027,14 @@ describe("VoteraVote", function () {
 
         await voteraVote.registerResult(proposal);
 
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
-        expect(voteCounts.length).equal(3);
+        const voteResult = await voteraVote.getVoteResult(proposal);
+        expect(voteResult.length).equal(3);
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(expectVoteCounts[i]);
+            expect(voteResult[i]).equal(expectVoteCounts[i]);
         }
     });
 
-    it("registerResult&getVoteCounts - no voter", async () => {
+    it("registerResult&getVoteResult - no voter", async () => {
         const blockLatest = await ethers.provider.getBlock("latest");
         const startTime = blockLatest.timestamp + 86400; // 1 day
         const endTime = startTime + 86400; // 1 day
@@ -1055,7 +1054,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(0));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(0));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
@@ -1063,10 +1062,10 @@ describe("VoteraVote", function () {
 
         await voteraVote.registerResult(proposal);
 
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
-        expect(voteCounts.length).equal(3);
+        const voteResult = await voteraVote.getVoteResult(proposal);
+        expect(voteResult.length).equal(3);
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(BigNumber.from(0));
+            expect(voteResult[i]).equal(BigNumber.from(0));
         }
     });
 
@@ -1124,7 +1123,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voterCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voterCount));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
@@ -1179,7 +1178,7 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(voterCount));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(voterCount));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
@@ -1211,12 +1210,12 @@ describe("VoteraVote", function () {
         await expect(voteraVote.registerResult(proposal)).to.be.revertedWith("E004");
     });
 
-    it("getVoteCounts: E001", async () => {
-        await expect(voteraVote.getVoteCounts(InvalidProposal)).to.be.revertedWith("E001");
+    it("getVoteResult: E001", async () => {
+        await expect(voteraVote.getVoteResult(InvalidProposal)).to.be.revertedWith("E001");
     });
 
-    it("getVoteCounts: E002", async () => {
-        await expect(voteraVote.getVoteCounts(proposal)).to.be.revertedWith("E002"); // call without setupVoteInfo
+    it("getVoteResult: E002", async () => {
+        await expect(voteraVote.getVoteResult(proposal)).to.be.revertedWith("E002"); // call without setupVoteInfo
 
         const blockLatest = await ethers.provider.getBlock("latest");
         const startTime = blockLatest.timestamp + 86400; // 1 day
@@ -1229,7 +1228,7 @@ describe("VoteraVote", function () {
             validators.map((v) => v.address)
         );
 
-        await expect(voteraVote.getVoteCounts(proposal)).to.be.revertedWith("E002");
+        await expect(voteraVote.getVoteResult(proposal)).to.be.revertedWith("E002");
 
         // wait until startTime
         await network.provider.send("evm_increaseTime", [86400]);
@@ -1239,12 +1238,12 @@ describe("VoteraVote", function () {
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
 
-        expect(await voteraVote.ballotCount(proposal)).equal(BigNumber.from(0));
+        expect(await voteraVote.getVoterCount(proposal)).equal(BigNumber.from(0));
 
         // wait until openTime
         await network.provider.send("evm_increaseTime", [30]);
         await network.provider.send("evm_mine");
 
-        await expect(voteraVote.getVoteCounts(proposal)).to.be.revertedWith("E002"); // call without registerResult
+        await expect(voteraVote.getVoteResult(proposal)).to.be.revertedWith("E002"); // call without registerResult
     });
 });

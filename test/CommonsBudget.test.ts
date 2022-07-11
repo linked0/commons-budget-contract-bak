@@ -41,7 +41,7 @@ describe("Test of Commons Budget Contract", () => {
         const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
         voteraVote = await voteraVoteFactory.connect(voteManager).deploy();
         await voteraVote.deployed();
-        await voteraVote.changeBudget(contract.address);
+        await voteraVote.changeCommonBudgetContract(contract.address);
 
         const voteAddress = voteraVote.address;
         const changeParamTx = await contract.changeVoteParam(voteManager.address, voteAddress);
@@ -159,7 +159,7 @@ describe("Test of Commons Budget Contract", () => {
         expect(voteAddress).equal(voteraVote.address);
 
         const voteInfo = await voteraVote.voteInfos(proposal);
-        expect(voteInfo.budget).equal(contract.address);
+        expect(voteInfo.commonsBudgetAddress).equal(contract.address);
     });
 
     it("createSystemProposal: InvalidFee", async () => {
@@ -322,7 +322,7 @@ describe("Test of Commons Budget Contract", () => {
         expect(voteAddress).equal(voteraVote.address);
 
         const voteInfo = await voteraVote.voteInfos(proposal);
-        expect(voteInfo.budget).equal(contract.address);
+        expect(voteInfo.commonsBudgetAddress).equal(contract.address);
     });
 
     it("createFundProposal: InvalidFee (NoFee)", async () => {
@@ -600,7 +600,7 @@ describe("Test of Commons Budget Contract", () => {
             submitBallotTx = await ballotVote.submitBallot(proposal, commitment, signature);
         }
 
-        expect(await voteraVote.ballotCount(proposal)).equal(voterCount);
+        expect(await voteraVote.getVoterCount(proposal)).equal(voterCount);
 
         if (submitBallotTx) {
             await submitBallotTx.wait();
@@ -660,28 +660,28 @@ describe("Test of Commons Budget Contract", () => {
         const expectVoteCounts = await recordVote(voteAddress, true);
 
         const validatorCount = await voteraVote.getValidatorCount(proposal);
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
+        const voteResult = await voteraVote.getVoteResult(proposal);
 
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(BigNumber.from(expectVoteCounts[i]));
+            expect(voteResult[i]).equal(BigNumber.from(expectVoteCounts[i]));
         }
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const finishVoteTx = await voteBudget.finishVote(proposal, validatorCount, voteCounts);
+        const finishVoteTx = await voteBudget.finishVote(proposal, validatorCount, voteResult);
         await finishVoteTx.wait();
 
         const proposalData = await contract.getProposalData(proposal);
         expect(proposalData.validatorSize).equal(validatorCount);
         for (let i = 0; i < 3; i += 1) {
-            expect(proposalData.voteCounts[i]).equal(voteCounts[i]);
+            expect(proposalData.voteResult[i]).equal(voteResult[i]);
         }
     });
 
     it("finishVote: NotExistProposal", async () => {
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         const validatorCount = 9;
-        const voteCounts = [3, 3, 3];
-        await expect(voteBudget.finishVote(proposal, validatorCount, voteCounts)).to.be.revertedWith(
+        const voteResult = [3, 3, 3];
+        await expect(voteBudget.finishVote(proposal, validatorCount, voteResult)).to.be.revertedWith(
             "NotExistProposal"
         );
     });
@@ -713,17 +713,17 @@ describe("Test of Commons Budget Contract", () => {
         const expectVoteCounts = await recordVote(voteAddress, true);
 
         const validatorCount = await voteraVote.getValidatorCount(proposal);
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
+        const voteResult = await voteraVote.getVoteResult(proposal);
 
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(BigNumber.from(expectVoteCounts[i]));
+            expect(voteResult[i]).equal(BigNumber.from(expectVoteCounts[i]));
         }
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const finishVoteTx = await voteBudget.finishVote(proposal, validatorCount, voteCounts);
+        const finishVoteTx = await voteBudget.finishVote(proposal, validatorCount, voteResult);
         await finishVoteTx.wait();
 
-        await expect(voteBudget.finishVote(proposal, validatorCount, voteCounts)).to.be.revertedWith(
+        await expect(voteBudget.finishVote(proposal, validatorCount, voteResult)).to.be.revertedWith(
             "AlreadyFinishedProposal"
         );
     });
@@ -757,8 +757,8 @@ describe("Test of Commons Budget Contract", () => {
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         const validatorCount = 9;
-        const voteCounts = [3, 3, 3];
-        await expect(voteBudget.finishVote(proposal, validatorCount, voteCounts)).to.be.revertedWith("NotEndProposal");
+        const voteResult = [3, 3, 3];
+        await expect(voteBudget.finishVote(proposal, validatorCount, voteResult)).to.be.revertedWith("NotEndProposal");
     });
 
     it("finishVote: NotAuthorized", async () => {
@@ -789,13 +789,13 @@ describe("Test of Commons Budget Contract", () => {
         const expectVoteCounts = await recordVote(voteAddress, true);
 
         const validatorCount = await voteraVote.getValidatorCount(proposal);
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
+        const voteResult = await voteraVote.getVoteResult(proposal);
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(BigNumber.from(expectVoteCounts[i]));
+            expect(voteResult[i]).equal(BigNumber.from(expectVoteCounts[i]));
         }
 
-        await expect(contract.finishVote(proposal, validatorCount, voteCounts)).to.be.revertedWith("NotAuthorized");
-        await expect(validatorBudget.finishVote(proposal, validatorCount, voteCounts)).to.be.revertedWith(
+        await expect(contract.finishVote(proposal, validatorCount, voteResult)).to.be.revertedWith("NotAuthorized");
+        await expect(validatorBudget.finishVote(proposal, validatorCount, voteResult)).to.be.revertedWith(
             "NotAuthorized"
         );
     });
@@ -827,16 +827,16 @@ describe("Test of Commons Budget Contract", () => {
         const expectVoteCounts = await recordVote(voteAddress, true);
 
         const validatorCount = await voteraVote.getValidatorCount(proposal);
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
+        const voteResult = await voteraVote.getVoteResult(proposal);
 
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(BigNumber.from(expectVoteCounts[i]));
+            expect(voteResult[i]).equal(BigNumber.from(expectVoteCounts[i]));
         }
 
         await voteraVote.transferOwnership(validators[0].address);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteBudget.finishVote(proposal, validatorCount, voteCounts)).to.be.revertedWith("InvalidVote");
+        await expect(voteBudget.finishVote(proposal, validatorCount, voteResult)).to.be.revertedWith("InvalidVote");
 
         const newVoteraVote = VoteraVoteFactory.connect(voteAddress, validators[0]);
         await newVoteraVote.transferOwnership(voteManager.address);
@@ -869,13 +869,13 @@ describe("Test of Commons Budget Contract", () => {
         const expectVoteCounts = await recordVote(voteAddress, true);
 
         const validatorCount = await voteraVote.getValidatorCount(proposal);
-        const voteCounts = await voteraVote.getVoteCounts(proposal);
+        const voteResult = await voteraVote.getVoteResult(proposal);
         for (let i = 0; i < 3; i += 1) {
-            expect(voteCounts[i]).equal(BigNumber.from(expectVoteCounts[i]));
+            expect(voteResult[i]).equal(BigNumber.from(expectVoteCounts[i]));
         }
 
         const voteraBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteraBudget.finishVote(proposal, validatorCount.add(1), voteCounts)).to.be.revertedWith(
+        await expect(voteraBudget.finishVote(proposal, validatorCount.add(1), voteResult)).to.be.revertedWith(
             "InvalidInput"
         );
 
@@ -884,12 +884,12 @@ describe("Test of Commons Budget Contract", () => {
             "InvalidInput"
         );
 
-        const invalidVoteCountsValue = voteCounts.map((v, index) => (index === 0 ? v.sub(1) : v));
+        const invalidVoteCountsValue = voteResult.map((v, index) => (index === 0 ? v.sub(1) : v));
         await expect(voteraBudget.finishVote(proposal, validatorCount, invalidVoteCountsValue)).to.be.revertedWith(
             "InvalidInput"
         );
 
-        const finishVoteTx = await voteraBudget.finishVote(proposal, validatorCount, voteCounts);
+        const finishVoteTx = await voteraBudget.finishVote(proposal, validatorCount, voteResult);
         await finishVoteTx.wait();
     });
 });

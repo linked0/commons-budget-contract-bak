@@ -43,10 +43,10 @@ interface ICommonsBudget {
     /// @dev this is called by vote manager
     /// @param proposalID id of proposal
     /// @param validatorSize size of valid validator of proposal's vote
-    /// @param voteCounts result of proposal's vote
+    /// @param voteResult result of proposal's vote
     function finishVote(
         bytes32 proposalID,
         uint256 validatorSize,
-        uint64[] calldata voteCounts
+        uint64[] calldata voteResult
     ) external;
 }

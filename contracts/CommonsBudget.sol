@@ -101,7 +101,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         uint256 fundAmount;
         address proposer;
         uint256 validatorSize;
-        uint64[] voteCounts;
+        uint64[] voteResult;
         address voteAddress;
     }
 
@@ -232,11 +232,11 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @dev this is called by vote manager
     /// @param _proposalID id of proposal
     /// @param _validatorSize size of valid validator of proposal's vote
-    /// @param _voteCounts result of proposal's vote
+    /// @param _voteResult result of proposal's vote
     function finishVote(
         bytes32 _proposalID,
         uint256 _validatorSize,
-        uint64[] calldata _voteCounts
+        uint64[] calldata _voteResult
     ) external override onlyNotFinishedProposal(_proposalID) onlyEndProposal(_proposalID) onlyVoteManager {
         address _voteAddress = proposalMaps[_proposalID].voteAddress;
         IVoteraVote voteraVote = IVoteraVote(_voteAddress);
@@ -244,15 +244,15 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         require(voteManager == voteraVote.getManager(), "InvalidVote");
         require(_validatorSize == voteraVote.getValidatorCount(_proposalID), "InvalidInput");
 
-        uint64[] memory voteCounts = voteraVote.getVoteCounts(_proposalID);
-        require(voteCounts.length == _voteCounts.length, "InvalidInput");
-        for (uint256 i = 0; i < voteCounts.length; i++) {
-            require(voteCounts[i] == _voteCounts[i], "InvalidInput");
+        uint64[] memory voteResult = voteraVote.getVoteResult(_proposalID);
+        require(voteResult.length == _voteResult.length, "InvalidInput");
+        for (uint256 i = 0; i < voteResult.length; i++) {
+            require(voteResult[i] == _voteResult[i], "InvalidInput");
         }
 
         proposalMaps[_proposalID].state = ProposalStates.FINISHED;
         proposalMaps[_proposalID].validatorSize = _validatorSize;
-        proposalMaps[_proposalID].voteCounts = _voteCounts;
+        proposalMaps[_proposalID].voteResult = _voteResult;
     }
 
     /// @notice get paid fee of proposal

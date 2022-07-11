@@ -9,7 +9,7 @@ interface IVoteraVote {
 
     function getValidatorCount(bytes32 proposalID) external view returns (uint256);
 
-    function getVoteCounts(bytes32 proposalID) external view returns (uint64[] memory);
+    function getVoteResult(bytes32 proposalID) external view returns (uint64[] memory);
 
     function submitBallot(
         bytes32 proposalID,
