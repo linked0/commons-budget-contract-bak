@@ -72,7 +72,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @return returns address of vote manager
     address public voteManager;
     /// @notice vote address is votera vote contract
-    /// @return returns addres of vote contract
+    /// @return returns address of vote contract
     address public voteAddress;
 
     enum ProposalType {
@@ -255,9 +255,9 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         proposalMaps[_proposalID].voteResult = _voteResult;
     }
 
-    /// @notice get paid fee of proposal
+    /// @notice get fees to be paid for the proposal
     /// @param _proposalID id of proposal
-    /// @return returns paid fee value
+    /// @return returns fee values to be paid for the proposal
     function getProposalValues(bytes32 _proposalID) public view returns (uint256) {
         return feeMaps[_proposalID].value;
     }
