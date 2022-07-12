@@ -173,10 +173,10 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         proposalMaps[_proposalID].fundAmount = _amount;
         proposalMaps[_proposalID].proposer = _proposer;
 
-        proposalMaps[_proposalID].voteAddress = initVote(_proposalID);
-
         feeMaps[_proposalID].value = msg.value;
         feeMaps[_proposalID].payer = msg.sender;
+
+        proposalMaps[_proposalID].voteAddress = initVote(_proposalID);
     }
 
     /// @notice create system proposal
@@ -200,7 +200,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         bytes32 dataHash = keccak256(abi.encode(_proposalID, _title, _start, _end, _docHash));
         require(ECDSA.recover(dataHash, _signature) == voteManager, "InvalidInput");
 
-        saveProposalData(ProposalType.SYSTEM, _proposalID, _title, _start, _end, _docHash, 0, address(0));
+        saveProposalData(ProposalType.SYSTEM, _proposalID, _title, _start, _end, _docHash, 0, msg.sender);
     }
 
     /// @notice create fund proposal
