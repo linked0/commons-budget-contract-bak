@@ -148,7 +148,7 @@ describe("Test of Commons Budget Contract", () => {
         expect(proposalData.end).equal(endTime);
         expect(proposalData.docHash).equal(docHash);
         expect(proposalData.fundAmount).equal(BigNumber.from(0));
-        expect(proposalData.proposer).equal(AddressZero);
+        expect(proposalData.proposer).equal(validators[0].address);
         expect(proposalData.validatorSize).equal(BigNumber.from(0));
 
         expect(await contract.getProposalValues(proposal)).equal(basicFee);
