@@ -678,7 +678,7 @@ describe("Test of Commons Budget Contract", () => {
             submitBallotTx = await ballotVote.submitBallot(proposal, commitment, signature);
         }
 
-        expect(await voteraVote.getVoterCount(proposal)).equal(voterCount);
+        expect(await voteraVote.getBallotCount(proposal)).equal(voterCount);
 
         if (submitBallotTx) {
             await submitBallotTx.wait();
@@ -692,7 +692,7 @@ describe("Test of Commons Budget Contract", () => {
         await network.provider.send("evm_mine");
 
         for (let i = 0; i < voterCount; i += 1) {
-            const ballot = await voteraVote.getBallotAtIndex(proposal, i);
+            const ballot = await voteraVote.getBallotAt(proposal, i);
             expect(ballot.key).equal(validators[i].address);
         }
 
