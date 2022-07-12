@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+import "./ICommonsBudget.sol";
 import "./IVoteraVote.sol";
 
 // E000 : authorization error
@@ -107,7 +108,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         return voteInfos[_proposalID].commonsBudgetAddress != address(0);
     }
 
-    function isContainValidator(bytes32 _proposalID, address _key) private view returns (bool) {
+    function isContainValidator(bytes32 _proposalID, address _key) public view returns (bool) {
         return validators[_proposalID].values[_key];
     }
 
@@ -115,7 +116,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         return voters[_proposalID].keys.length;
     }
 
-    function isContainVoter(bytes32 _proposalID, address _key) private view returns (bool) {
+    function isContainVoter(bytes32 _proposalID, address _key) public view returns (bool) {
         return voters[_proposalID].values[_key].key == _key;
     }
 
@@ -162,13 +163,12 @@ contract VoteraVote is Ownable, IVoteraVote {
         }
     }
 
-    function myBallot(bytes32 _proposalID) public view returns (Ballot memory) {
-        return voters[_proposalID].values[msg.sender];
+    function getBallot(bytes32 _proposalID, address validator) public view returns (Ballot memory) {
+        return voters[_proposalID].values[validator];
     }
 
     function getBallotAtIndex(bytes32 _proposalID, uint256 _index) public view returns (Ballot memory) {
         require(isExistProposal(_proposalID) && _index < getVoterCount(_proposalID), "E001");
-        // require(voteInfos[_proposalID].startVote > 0, "E002"); // unnecessary check because of above check
         require(block.timestamp >= voteInfos[_proposalID].endVote, "E004");
         return voters[_proposalID].values[voters[_proposalID].keys[_index]];
     }
@@ -180,13 +180,15 @@ contract VoteraVote is Ownable, IVoteraVote {
         uint64[] calldata _nonces
     ) external onlyOwner {
         require(
-            isExistProposal(_proposalID) && _validators.length == _choices.length && _validators.length == _nonces.length,
+            isExistProposal(_proposalID) &&
+                _validators.length == _choices.length &&
+                _validators.length == _nonces.length,
             "E001"
         );
         require(!voteInfos[_proposalID].finishVote && voteInfos[_proposalID].openVote > 0, "E002");
         require(block.timestamp >= voteInfos[_proposalID].openVote, "E004");
 
-        address vote = address(this);
+        address voteContract = address(this);
         uint256 len = _validators.length;
         uint256 _revealCount = revealCounts[_proposalID];
 
@@ -195,7 +197,9 @@ contract VoteraVote is Ownable, IVoteraVote {
             if (isContainVoter(_proposalID, _validator)) {
                 require(_nonces[i] != 0, "E001");
 
-                bytes32 dataHash = keccak256(abi.encode(vote, _proposalID, _validator, _choices[i], _nonces[i]));
+                bytes32 dataHash = keccak256(
+                    abi.encode(voteContract, _proposalID, _validator, _choices[i], _nonces[i])
+                );
                 require(dataHash == voters[_proposalID].values[_validator].commitment, "E001");
 
                 if (voters[_proposalID].values[_validator].nonce == 0) {
@@ -209,7 +213,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         revealCounts[_proposalID] = _revealCount;
     }
 
-    function registerResult(bytes32 _proposalID) public onlyOwner {
+    function countVote(bytes32 _proposalID) public onlyOwner {
         require(isExistProposal(_proposalID), "E001");
         require(
             !voteInfos[_proposalID].finishVote &&
@@ -233,12 +237,17 @@ contract VoteraVote is Ownable, IVoteraVote {
         voteInfos[_proposalID].voteResult = voteResult;
 
         emit VoteResultPublished(_proposalID);
+
+        ICommonsBudget(voteInfos[_proposalID].commonsBudgetAddress).finishVote(
+            _proposalID,
+            validators[_proposalID].keys.length,
+            voteResult
+        );
     }
 
     function getVoteResult(bytes32 _proposalID) external view override returns (uint64[] memory) {
         require(isExistProposal(_proposalID), "E001");
         require(voteInfos[_proposalID].finishVote && voteInfos[_proposalID].openVote > 0, "E002");
-        // require(block.timestamp >= voteInfos[_proposalID].openVote, "E004"); // unneccesary check because of above check
         uint256 len = voteInfos[_proposalID].voteResult.length;
         uint64[] memory _voteResult = new uint64[](len);
         for (uint256 i = 0; i < len; i++) {

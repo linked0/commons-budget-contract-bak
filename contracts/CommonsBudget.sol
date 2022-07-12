@@ -101,7 +101,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         uint256 fundAmount;
         address proposer;
         uint256 validatorSize;
-        uint64[] voteResult;
+        uint64[3] voteResult;
         address voteAddress;
     }
 
@@ -126,6 +126,11 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     modifier onlyEndProposal(bytes32 _proposalID) {
         require(block.timestamp >= proposalMaps[_proposalID].end, "NotEndProposal");
+        _;
+    }
+
+    modifier onlyVoteContract(bytes32 _proposalID) {
+        require(msg.sender == proposalMaps[_proposalID].voteAddress, "NotAuthorized");
         _;
     }
 
@@ -236,8 +241,14 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     function finishVote(
         bytes32 _proposalID,
         uint256 _validatorSize,
-        uint64[] calldata _voteResult
-    ) external override onlyNotFinishedProposal(_proposalID) onlyEndProposal(_proposalID) onlyVoteManager {
+        uint64[3] calldata _voteResult
+    )
+        external
+        override
+        onlyNotFinishedProposal(_proposalID)
+        onlyEndProposal(_proposalID)
+        onlyVoteContract(_proposalID)
+    {
         address _voteAddress = proposalMaps[_proposalID].voteAddress;
         IVoteraVote voteraVote = IVoteraVote(_voteAddress);
 
