@@ -714,9 +714,7 @@ describe("Test of Commons Budget Contract", () => {
     it("finishVote: NotExistProposal", async () => {
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         const validatorCount = 9;
-        await expect(voteBudget.finishVote(proposal, validatorCount, [3, 3, 3])).to.be.revertedWith(
-            "NotExistProposal"
-        );
+        await expect(voteBudget.finishVote(proposal, validatorCount, [3, 3, 3])).to.be.revertedWith("NotExistProposal");
     });
 
     it("finishVote: AlreadyFinishedProposal", async () => {
@@ -762,9 +760,9 @@ describe("Test of Commons Budget Contract", () => {
         }
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteBudget.finishVote(proposal, validatorCount, [voteResult[0], voteResult[1], voteResult[2]])).to.be.revertedWith(
-            "AlreadyFinishedProposal"
-        );
+        await expect(
+            voteBudget.finishVote(proposal, validatorCount, [voteResult[0], voteResult[1], voteResult[2]])
+        ).to.be.revertedWith("AlreadyFinishedProposal");
     });
 
     it("finishVote: NotEndProposal", async () => {
@@ -854,9 +852,19 @@ describe("Test of Commons Budget Contract", () => {
 
         const validatorCount = await voteraVote.getValidatorCount(proposal);
 
-        await expect(contract.finishVote(proposal, validatorCount, [expectVoteCounts[0], expectVoteCounts[1], expectVoteCounts[2]])).to.be.revertedWith("NotAuthorized");
-        await expect(validatorBudget.finishVote(proposal, validatorCount, [expectVoteCounts[0], expectVoteCounts[1], expectVoteCounts[2]])).to.be.revertedWith(
-            "NotAuthorized"
-        );
+        await expect(
+            contract.finishVote(proposal, validatorCount, [
+                expectVoteCounts[0],
+                expectVoteCounts[1],
+                expectVoteCounts[2],
+            ])
+        ).to.be.revertedWith("NotAuthorized");
+        await expect(
+            validatorBudget.finishVote(proposal, validatorCount, [
+                expectVoteCounts[0],
+                expectVoteCounts[1],
+                expectVoteCounts[2],
+            ])
+        ).to.be.revertedWith("NotAuthorized");
     });
 });

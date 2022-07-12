@@ -74,7 +74,11 @@ contract VoteraVote is Ownable, IVoteraVote {
 
     function init(bytes32 _proposalID) external override {
         require(msg.sender == commonsBudgetAddress, "E000");
-        require(voteInfos[_proposalID].state == VoteState.INVALID && voteInfos[_proposalID].commonsBudgetAddress == address(0), "E001");
+        require(
+            voteInfos[_proposalID].state == VoteState.INVALID &&
+                voteInfos[_proposalID].commonsBudgetAddress == address(0),
+            "E001"
+        );
         voteInfos[_proposalID].state = VoteState.CREATED;
         voteInfos[_proposalID].commonsBudgetAddress = commonsBudgetAddress;
     }
@@ -125,7 +129,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         return ballots[_proposalID].keys.length;
     }
 
-    function isContainVoter(bytes32 _proposalID, address _key) public view returns (bool) {
+    function isContainBallot(bytes32 _proposalID, address _key) public view returns (bool) {
         return ballots[_proposalID].values[_key].key == _key;
     }
 
@@ -159,7 +163,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         require(block.timestamp < voteInfos[_proposalID].endVote, "E003");
         verifyBallot(_proposalID, msg.sender, _commitment, _signature);
 
-        if (isContainVoter(_proposalID, msg.sender)) {
+        if (isContainBallot(_proposalID, msg.sender)) {
             ballots[_proposalID].values[msg.sender].commitment = _commitment;
         } else {
             ballots[_proposalID].values[msg.sender] = Ballot({
@@ -203,7 +207,7 @@ contract VoteraVote is Ownable, IVoteraVote {
 
         for (uint256 i = 0; i < len; ++i) {
             address _validator = _validators[i];
-            if (isContainVoter(_proposalID, _validator)) {
+            if (isContainBallot(_proposalID, _validator)) {
                 require(_nonces[i] != 0, "E001");
 
                 bytes32 dataHash = keccak256(
@@ -224,7 +228,8 @@ contract VoteraVote is Ownable, IVoteraVote {
 
     function countVote(bytes32 _proposalID) public onlyOwner {
         require(isExistProposal(_proposalID), "E001");
-        require(voteInfos[_proposalID].state == VoteState.RUNNING && 
+        require(
+            voteInfos[_proposalID].state == VoteState.RUNNING &&
                 revealCounts[_proposalID] == getBallotCount(_proposalID),
             "E002"
         );
