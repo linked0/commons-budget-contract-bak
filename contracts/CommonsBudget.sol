@@ -148,9 +148,9 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         voteAddress = _voteAddress;
     }
 
-    function initVote(bytes32 _proposalID) internal returns (address) {
+    function initVote(bytes32 _proposalID, uint64 _start, uint64 _end) internal returns (address) {
         require(voteAddress != address(0) && voteManager != address(0), "NotReady");
-        IVoteraVote(voteAddress).init(_proposalID);
+        IVoteraVote(voteAddress).init(_proposalID, _start, _end);
         return voteAddress;
     }
 
@@ -176,7 +176,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         feeMaps[_proposalID].value = msg.value;
         feeMaps[_proposalID].payer = msg.sender;
 
-        proposalMaps[_proposalID].voteAddress = initVote(_proposalID);
+        proposalMaps[_proposalID].voteAddress = initVote(_proposalID, _start, _end);
     }
 
     /// @notice create system proposal

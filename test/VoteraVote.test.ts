@@ -39,6 +39,9 @@ describe("VoteraVote", function () {
     const basicFee = ethers.utils.parseEther("100.0");
 
     let proposal: string;
+    let startTime: number;
+    let endTime: number;
+    let openTime: number;
     let voteAddress: string;
 
     let voteraVote: VoteraVote;
@@ -79,8 +82,9 @@ describe("VoteraVote", function () {
         // get current blocktime and set vote basic parameter
         const blockLatest = await ethers.provider.getBlock("latest");
         const title = "Votera Vote Test";
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
+        startTime = blockLatest.timestamp + 86400; // 1 day
+        endTime = startTime + 86400; // 1 day
+        openTime = endTime + 30;
         const docHash = getHash("bodyHash");
         const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
 
@@ -102,11 +106,6 @@ describe("VoteraVote", function () {
         expect(await voteraVote.getManager()).to.be.equal(voteManager.address);
         const voteInfo = await voteraVote.voteInfos(proposal);
         expect(voteInfo.commonsBudgetAddress).equal(budget.address);
-
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
 
         displayBalance(voteManager.address, "init");
 
@@ -232,15 +231,10 @@ describe("VoteraVote", function () {
     it("init: E000", async () => {
         const invalidCaller = deployer;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
-        await expect(invalidCallerVote.init(proposal)).to.be.revertedWith("E000");
+        await expect(invalidCallerVote.init(proposal, startTime, endTime)).to.be.revertedWith("E000");
     });
 
     it("setupVoteInfo", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
 
         const voteInfo = await voteraVote.voteInfos(proposal);
@@ -252,9 +246,6 @@ describe("VoteraVote", function () {
     });
 
     it("setupVoteInfo: Ownable: caller is not the owner", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
         const openTime = endTime + 30;
 
         const invalidCaller = budgetManager;
@@ -265,16 +256,12 @@ describe("VoteraVote", function () {
     });
 
     it("setupVoteInfo: E001", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await expect(
             voteraVote.setupVoteInfo(InvalidProposal, startTime, endTime, openTime, "info")
         ).to.be.revertedWith("E001");
 
         // block.timestamp < _startVote
+        const blockLatest = await ethers.provider.getBlock("latest");
         const invalidStartTime = blockLatest.timestamp - 100;
         await expect(
             voteraVote.setupVoteInfo(proposal, invalidStartTime, endTime, openTime, "info")
@@ -291,12 +278,7 @@ describe("VoteraVote", function () {
         ).to.be.revertedWith("E001");
     });
 
-    it("setupVoteInfo: E002", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
+    it("setupVoteInfo: E002 - call setupVote twice", async () => {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
 
         // call setupVoteInfo again
@@ -305,12 +287,15 @@ describe("VoteraVote", function () {
         );
     });
 
-    it("addValidators", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
+    it("setupVoteInfo: E002 - invalid parameter", async () => {
+        const wrongStartTime = startTime + 100;
+        await expect(voteraVote.setupVoteInfo(proposal, wrongStartTime, endTime, openTime, "info")).to.be.revertedWith("E002");
 
+        const wrongEndTime = endTime - 100;
+        await expect(voteraVote.setupVoteInfo(proposal, startTime, wrongEndTime, openTime, "info")).to.be.revertedWith("E002");
+    });
+
+    it("addValidators", async () => {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
 
         await voteraVote.addValidators(
@@ -364,11 +349,6 @@ describe("VoteraVote", function () {
     });
 
     it("addValidators: E003", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
 
         // wait until startTime
@@ -385,11 +365,6 @@ describe("VoteraVote", function () {
     });
 
     it("submitBallot", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -475,11 +450,6 @@ describe("VoteraVote", function () {
     });
 
     it("submitBallot: E000", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -522,11 +492,6 @@ describe("VoteraVote", function () {
     });
 
     it("submitBallot: E004", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -545,11 +510,6 @@ describe("VoteraVote", function () {
     });
 
     it("submitBallot: E003", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -576,11 +536,6 @@ describe("VoteraVote", function () {
     });
 
     it("submitBallot: E001 - verifyBallot failed", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -610,11 +565,6 @@ describe("VoteraVote", function () {
     });
 
     it("getBallotAt", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -660,11 +610,6 @@ describe("VoteraVote", function () {
         // call without setupVoteInfo
         await expect(voteraVote.getBallotAt(proposal, 0)).to.be.revertedWith("E001");
 
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -705,11 +650,6 @@ describe("VoteraVote", function () {
     });
 
     it("getBallotAt: E004", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -755,11 +695,6 @@ describe("VoteraVote", function () {
             nonces.push(nonce);
             commitments.push(commitment);
         }
-
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
 
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
@@ -830,11 +765,6 @@ describe("VoteraVote", function () {
 
         await expect(voteraVote.revealBallot(InvalidProposal, keys, choices, nonces)).to.be.revertedWith("E001"); // not found proposal
 
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -900,11 +830,6 @@ describe("VoteraVote", function () {
 
         await expect(voteraVote.revealBallot(proposal, keys, choices, nonces)).to.be.revertedWith("E002"); // call without setupVoteInfo
 
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -957,11 +882,6 @@ describe("VoteraVote", function () {
             commitments.push(commitment);
         }
 
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -976,11 +896,6 @@ describe("VoteraVote", function () {
     });
 
     it("countVote&getVoteResult", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -1035,11 +950,6 @@ describe("VoteraVote", function () {
     });
 
     it("countVote&getVoteResult - no voter", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -1081,11 +991,6 @@ describe("VoteraVote", function () {
 
     it("countVote: E002 - not initialized && duplicated call", async () => {
         await expect(voteraVote.countVote(proposal)).to.be.revertedWith("E002"); // not initialized
-
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
 
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
@@ -1137,11 +1042,6 @@ describe("VoteraVote", function () {
     });
 
     it("countVote: E002 - not revealed", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -1196,11 +1096,6 @@ describe("VoteraVote", function () {
     });
 
     it("countVote: E004", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
-
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
@@ -1216,11 +1111,6 @@ describe("VoteraVote", function () {
 
     it("getVoteResult: E002", async () => {
         await expect(voteraVote.getVoteResult(proposal)).to.be.revertedWith("E002"); // call without setupVoteInfo
-
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const startTime = blockLatest.timestamp + 86400; // 1 day
-        const endTime = startTime + 86400; // 1 day
-        const openTime = endTime + 30;
 
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
