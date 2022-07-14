@@ -115,7 +115,8 @@ describe("VoteraVote", function () {
         // Add Validator list for voter confirmation
         const addValidatorTx = await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
         await addValidatorTx.wait();
         expect(await voteraVote.getValidatorCount(proposal)).equal(validators.length);
@@ -289,10 +290,14 @@ describe("VoteraVote", function () {
 
     it("setupVoteInfo: E002 - invalid parameter", async () => {
         const wrongStartTime = startTime + 100;
-        await expect(voteraVote.setupVoteInfo(proposal, wrongStartTime, endTime, openTime, "info")).to.be.revertedWith("E002");
+        await expect(voteraVote.setupVoteInfo(proposal, wrongStartTime, endTime, openTime, "info")).to.be.revertedWith(
+            "E002"
+        );
 
         const wrongEndTime = endTime - 100;
-        await expect(voteraVote.setupVoteInfo(proposal, startTime, wrongEndTime, openTime, "info")).to.be.revertedWith("E002");
+        await expect(voteraVote.setupVoteInfo(proposal, startTime, wrongEndTime, openTime, "info")).to.be.revertedWith(
+            "E002"
+        );
     });
 
     it("addValidators", async () => {
@@ -300,7 +305,8 @@ describe("VoteraVote", function () {
 
         await voteraVote.addValidators(
             proposal,
-            validators.slice(0, 5).map((v) => v.address)
+            validators.slice(0, 5).map((v) => v.address),
+            false
         );
         expect(await voteraVote.getValidatorCount(proposal)).equal(BigNumber.from(5));
         for (let i = 0; i < 5; i += 1) {
@@ -309,7 +315,8 @@ describe("VoteraVote", function () {
 
         await voteraVote.addValidators(
             proposal,
-            validators.slice(3).map((v) => v.address)
+            validators.slice(3).map((v) => v.address),
+            true
         );
         expect(await voteraVote.getValidatorCount(proposal)).equal(BigNumber.from(validators.length));
         for (let i = 0; i < validators.length; i += 1) {
@@ -323,7 +330,8 @@ describe("VoteraVote", function () {
         await expect(
             invalidCallerVote.addValidators(
                 proposal,
-                validators.map((v) => v.address)
+                validators.map((v) => v.address),
+                true
             )
         ).to.be.revertedWith("Ownable: caller is not the owner");
     });
@@ -333,7 +341,8 @@ describe("VoteraVote", function () {
         await expect(
             voteraVote.addValidators(
                 InvalidProposal,
-                validators.map((v) => v.address)
+                validators.map((v) => v.address),
+                true
             )
         ).to.be.revertedWith("E001");
     });
@@ -343,7 +352,26 @@ describe("VoteraVote", function () {
         await expect(
             voteraVote.addValidators(
                 proposal,
-                validators.map((v) => v.address)
+                validators.map((v) => v.address),
+                true
+            )
+        ).to.be.revertedWith("E002");
+    });
+
+    it("addValidators: E002 - add validator after finalize", async () => {
+        await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
+
+        await voteraVote.addValidators(
+            proposal,
+            validators.slice(0, 5).map((v) => v.address),
+            true
+        );
+
+        await expect(
+            voteraVote.addValidators(
+                proposal,
+                validators.slice(5).map((v) => v.address),
+                true
             )
         ).to.be.revertedWith("E002");
     });
@@ -359,7 +387,8 @@ describe("VoteraVote", function () {
         await expect(
             voteraVote.addValidators(
                 proposal,
-                validators.map((v) => v.address)
+                validators.map((v) => v.address),
+                true
             )
         ).to.be.revertedWith("E003");
     });
@@ -368,7 +397,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -453,7 +483,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -495,7 +526,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         const choice = 1;
@@ -513,7 +545,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -539,7 +572,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -568,7 +602,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -613,7 +648,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -653,7 +689,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -699,7 +736,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -768,7 +806,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -833,7 +872,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -885,7 +925,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -899,7 +940,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -953,7 +995,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -995,7 +1038,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -1045,7 +1089,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
@@ -1099,7 +1144,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         await expect(voteraVote.countVote(proposal)).to.be.revertedWith("E004");
@@ -1115,7 +1161,8 @@ describe("VoteraVote", function () {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         await expect(voteraVote.getVoteResult(proposal)).to.be.revertedWith("E002");

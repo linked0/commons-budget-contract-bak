@@ -32,7 +32,14 @@ contract VoteraVote is Ownable, IVoteraVote {
         uint64[3] voteResult;
     }
 
+    enum ValidatorListState {
+        INVALID,
+        SETTING,
+        FINALIZED
+    }
+
     struct ValidatorMap {
+        ValidatorListState state;
         address[] keys;
         mapping(address => bool) values;
     }
@@ -81,7 +88,11 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @param _proposalID id of proposal
     /// @param _startVote vote starting time (seconds since the epoch)
     /// @param _endVote vote ending time (seconds since the epoch)
-    function init(bytes32 _proposalID, uint64 _startVote, uint64 _endVote) external override {
+    function init(
+        bytes32 _proposalID,
+        uint64 _startVote,
+        uint64 _endVote
+    ) external override {
         require(msg.sender == commonsBudgetAddress, "E000");
         require(
             voteInfos[_proposalID].state == VoteState.INVALID &&
@@ -118,14 +129,22 @@ contract VoteraVote is Ownable, IVoteraVote {
         voteInfos[_proposalID].state = VoteState.RUNNING;
         voteInfos[_proposalID].openVote = _openVote;
         voteInfos[_proposalID].info = _info;
+
+        validators[_proposalID].state = ValidatorListState.SETTING;
     }
 
     /// @notice add validator
     /// @param _proposalID id of proposal
     /// @param _validators address of validators
-    function addValidators(bytes32 _proposalID, address[] calldata _validators) external onlyOwner {
+    /// @param _finalized is last validator or not
+    function addValidators(
+        bytes32 _proposalID,
+        address[] calldata _validators,
+        bool _finalized
+    ) external onlyOwner {
         require(isExistProposal(_proposalID), "E001");
         require(voteInfos[_proposalID].state == VoteState.RUNNING, "E002");
+        require(validators[_proposalID].state == ValidatorListState.SETTING, "E002");
         require(block.timestamp < voteInfos[_proposalID].startVote, "E003");
 
         uint256 len = _validators.length;
@@ -136,6 +155,10 @@ contract VoteraVote is Ownable, IVoteraVote {
                 validators[_proposalID].keys.push(_validator);
             }
         }
+
+        if (_finalized) {
+            validators[_proposalID].state = ValidatorListState.FINALIZED;
+        }
     }
 
     function isExistProposal(bytes32 _proposalID) private view returns (bool) {
@@ -145,7 +168,7 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @notice check whether registered validator of proposal
     /// @param _proposalID id of proposal
     /// @param _address check address
-    /// @return returns true if address is validator or false 
+    /// @return returns true if address is validator or false
     function isContainValidator(bytes32 _proposalID, address _address) public view returns (bool) {
         return validators[_proposalID].values[_address];
     }
@@ -163,6 +186,12 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @return returns true if found ballot, or false
     function isContainBallot(bytes32 _proposalID, address _address) public view returns (bool) {
         return ballots[_proposalID].values[_address].key == _address;
+    }
+
+    /// @notice get validator list state
+    /// @return returns the state of validator list
+    function getValidatorListState(bytes32 _proposalID) public view returns (ValidatorListState) {
+        return validators[_proposalID].state;
     }
 
     /// @notice get count of validator
@@ -193,7 +222,7 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @notice submit ballot
     /// @param _proposalID id of proposal
     /// @param _commitment commitment of ballot
-    /// @param _signature signature of commitment by vote manager 
+    /// @param _signature signature of commitment by vote manager
     function submitBallot(
         bytes32 _proposalID,
         bytes32 _commitment,

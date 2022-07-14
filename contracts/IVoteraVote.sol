@@ -8,7 +8,11 @@ interface IVoteraVote {
     /// @param proposalID id of proposal
     /// @param startVote vote starting time (seconds since the epoch)
     /// @param endVote vote ending time (seconds since the epoch)
-    function init(bytes32 proposalID, uint64 startVote, uint64 endVote) external;
+    function init(
+        bytes32 proposalID,
+        uint64 startVote,
+        uint64 endVote
+    ) external;
 
     /// @notice get votera vote manager
     /// @return returns address of votera vote manager
@@ -27,7 +31,7 @@ interface IVoteraVote {
     /// @notice submit ballot
     /// @param proposalID id of proposal
     /// @param commitment commitment of ballot
-    /// @param signature signature of commitment by vote manager 
+    /// @param signature signature of commitment by vote manager
     function submitBallot(
         bytes32 proposalID,
         bytes32 commitment,

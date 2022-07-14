@@ -644,7 +644,8 @@ describe("Test of Commons Budget Contract", () => {
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
             proposal,
-            validators.map((v) => v.address)
+            validators.map((v) => v.address),
+            true
         );
 
         // wait until startTime
