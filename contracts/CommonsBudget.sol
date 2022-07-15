@@ -101,7 +101,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         uint256 fundAmount;
         address proposer;
         uint256 validatorSize;
-        uint64[3] voteResult;
+        uint64[] voteResult;
         address voteAddress;
     }
 
@@ -245,7 +245,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     function finishVote(
         bytes32 _proposalID,
         uint256 _validatorSize,
-        uint64[3] calldata _voteResult
+        uint64[] calldata _voteResult
     )
         external
         override

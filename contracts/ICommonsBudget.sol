@@ -47,6 +47,6 @@ interface ICommonsBudget {
     function finishVote(
         bytes32 proposalID,
         uint256 validatorSize,
-        uint64[3] calldata voteResult
+        uint64[] calldata voteResult
     ) external;
 }

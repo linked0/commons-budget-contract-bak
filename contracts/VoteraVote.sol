@@ -29,7 +29,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         uint64 endVote;
         uint64 openVote;
         string info;
-        uint64[3] voteResult;
+        uint64[] voteResult;
     }
 
     enum ValidatorListState {
@@ -322,7 +322,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         );
         require(block.timestamp >= voteInfos[_proposalID].openVote && voteInfos[_proposalID].openVote > 0, "E004");
 
-        uint64[3] memory voteResult;
+        uint64[] memory voteResult = new uint64[](3);
         uint256 revealCount = revealCounts[_proposalID];
 
         for (uint256 i = 0; i < revealCount; i++) {
