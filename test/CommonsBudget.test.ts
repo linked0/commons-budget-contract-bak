@@ -1,15 +1,15 @@
 import chai, { expect } from "chai";
+import crypto from "crypto";
 import { solidity } from "ethereum-waffle";
 import { BigNumber, utils } from "ethers";
 import { ethers, network, waffle } from "hardhat";
-import crypto from "crypto";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
-import { signCommitment, makeCommitment, signSystemPropsal, signFundProposal } from "./VoteHelper";
+import { makeCommitment, signCommitment, signFundProposal, signSystemPropsal } from "./VoteHelper";
 
 import * as assert from "assert";
 

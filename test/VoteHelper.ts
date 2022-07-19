@@ -1,6 +1,6 @@
-import { ethers } from "hardhat";
 import crypto from "crypto";
 import { BigNumberish, Wallet } from "ethers";
+import { ethers } from "hardhat";
 
 export function getHash(body: string): string {
     const hash = crypto.createHash("sha256");
