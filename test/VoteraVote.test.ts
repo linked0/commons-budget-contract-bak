@@ -107,7 +107,7 @@ describe("VoteraVote", () => {
         const voteInfo = await voteraVote.voteInfos(proposal);
         expect(voteInfo.commonsBudgetAddress).equal(budget.address);
 
-        displayBalance(voteManager.address, "init");
+        await displayBalance(voteManager.address, "init");
 
         // Setup Vote Information
         await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
