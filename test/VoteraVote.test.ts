@@ -10,7 +10,7 @@ import {
     VoteraVote__factory as VoteraVoteFactory,
     // eslint-disable-next-line node/no-missing-import
 } from "../typechain";
-import { getHash, makeCommitment, signCommitment, signSystemPropsal } from "./VoteHelper";
+import { getHash, makeCommitment, signCommitment, signSystemProposal } from "./VoteHelper";
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 const InvalidProposal = "0x43d26d775ef3a282483394ce041a2757fbf700c9cf86accc6f0ce410accf123f";
@@ -49,8 +49,8 @@ describe("VoteraVote", function () {
 
     before(async () => {
         // deploy CommonsBudget
-        const bugetFactory = await ethers.getContractFactory("CommonsBudget");
-        budget = await bugetFactory.connect(budgetManager).deploy();
+        const budgetFactory = await ethers.getContractFactory("CommonsBudget");
+        budget = await budgetFactory.connect(budgetManager).deploy();
         await budget.deployed();
 
         // deploy VoteraVote
@@ -86,7 +86,7 @@ describe("VoteraVote", function () {
         endTime = startTime + 86400; // 1 day
         openTime = endTime + 30;
         const docHash = getHash("bodyHash");
-        const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         // make proposal data (by validator)
         const validatorBudget = CommonsBudgetFactory.connect(budget.address, validators[0]);

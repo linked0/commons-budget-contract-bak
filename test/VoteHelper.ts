@@ -23,7 +23,7 @@ export function makeCommitment(
     return Promise.resolve(ethers.utils.keccak256(encodedResult));
 }
 
-export function signSystemPropsal(
+export function signSystemProposal(
     signer: Wallet,
     proposalID: string,
     title: string,

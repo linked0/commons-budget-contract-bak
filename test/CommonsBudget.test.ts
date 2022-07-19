@@ -9,7 +9,7 @@ import {
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
-import { makeCommitment, signCommitment, signFundProposal, signSystemPropsal } from "./VoteHelper";
+import { makeCommitment, signCommitment, signFundProposal, signSystemProposal } from "./VoteHelper";
 
 import * as assert from "assert";
 
@@ -126,7 +126,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createSystemProposal(
@@ -168,7 +168,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         // call without fee
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
@@ -183,7 +183,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const wrongStartTime = 0;
@@ -206,7 +206,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await validatorBudget.createSystemProposal(proposal, title, startTime, endTime, docHash, signProposal, {
@@ -231,7 +231,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         // call createSystemProposal without initializing changeVoteParam of contract
         const validatorBudget = CommonsBudgetFactory.connect(newContract.address, validators[0]);
@@ -248,7 +248,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemPropsal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         const wrongTitle = "WrongProposalTitle";
 
@@ -260,7 +260,7 @@ describe("Test of Commons Budget Contract", () => {
         ).to.be.revertedWith("InvalidInput");
 
         const wrongSigner = admin;
-        const wrongSignProposal = await signSystemPropsal(wrongSigner, proposal, title, startTime, endTime, docHash);
+        const wrongSignProposal = await signSystemProposal(wrongSigner, proposal, title, startTime, endTime, docHash);
         await expect(
             validatorBudget.createSystemProposal(proposal, title, startTime, endTime, docHash, wrongSignProposal, {
                 value: basicFee,
