@@ -247,12 +247,12 @@ describe("VoteraVote", function () {
     });
 
     it("setupVoteInfo: Ownable: caller is not the owner", async () => {
-        const openTime = endTime + 30;
+        const openTime2 = endTime + 30;
 
         const invalidCaller = budgetManager;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(
-            invalidCallerVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info")
+            invalidCallerVote.setupVoteInfo(proposal, startTime, endTime, openTime2, "info")
         ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
