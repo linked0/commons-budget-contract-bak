@@ -34,8 +34,8 @@ describe("Test of Commons Budget Contract", () => {
     let proposal: string;
 
     before(async () => {
-        const CommonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-        contract = (await CommonsBudgetFactory.deploy()) as CommonsBudget;
+        const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
+        contract = (await commonsBudgetFactory.deploy()) as CommonsBudget;
         await contract.deployed();
 
         const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
@@ -99,8 +99,8 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     it("changeVoteParam", async () => {
-        const CommonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-        const testContract = (await CommonsBudgetFactory.deploy()) as CommonsBudget;
+        const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
+        const testContract = (await commonsBudgetFactory.deploy()) as CommonsBudget;
         await testContract.deployed();
 
         await testContract.changeVoteParam(admin.address, contract.address);
