@@ -15,8 +15,7 @@ export function makeCommitment(
     choice: number,
     nonce: number
 ): Promise<string> {
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    const encodedResult = abiCoder.encode(
+    const encodedResult = ethers.utils.defaultAbiCoder.encode(
         ["address", "bytes32", "address", "uint8", "uint64"],
         [vote, proposalID, sender, choice, nonce]
     );
@@ -31,8 +30,7 @@ export function signSystemProposal(
     end: BigNumberish,
     docHash: string
 ): Promise<string> {
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    const encodedResult = abiCoder.encode(
+    const encodedResult = ethers.utils.defaultAbiCoder.encode(
         ["bytes32", "string", "uint64", "uint64", "bytes32"],
         [proposalID, title, start, end, docHash]
     );
@@ -50,8 +48,7 @@ export function signFundProposal(
     amount: BigNumberish,
     proposer: string
 ): Promise<string> {
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    const encodedResult = abiCoder.encode(
+    const encodedResult = ethers.utils.defaultAbiCoder.encode(
         ["bytes32", "string", "uint64", "uint64", "bytes32", "uint256", "address"],
         [proposalID, title, start, end, docHash, amount, proposer]
     );
@@ -65,8 +62,10 @@ export function signCommitment(
     sender: string,
     commitment: string
 ): Promise<string> {
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    const encodedResult = abiCoder.encode(["bytes32", "address", "bytes32"], [proposalID, sender, commitment]);
+    const encodedResult = ethers.utils.defaultAbiCoder.encode(
+        ["bytes32", "address", "bytes32"],
+        [proposalID, sender, commitment]
+    );
     const sig = signer._signingKey().signDigest(ethers.utils.keccak256(encodedResult));
     return Promise.resolve(ethers.utils.joinSignature(sig));
 }
