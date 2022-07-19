@@ -1,7 +1,7 @@
 import chai, { expect } from "chai";
 import crypto from "crypto";
 import { solidity } from "ethereum-waffle";
-import { BigNumber, utils } from "ethers";
+import { BigNumber, utils, Wallet } from "ethers";
 import { ethers, network, waffle } from "hardhat";
 import {
     CommonsBudget,
@@ -46,6 +46,9 @@ describe("VoteraVote", () => {
 
     let voteraVote: VoteraVote;
     let voteBudget: CommonsBudget;
+
+    let invalidCaller: Wallet;
+    let invalidSigner: Wallet;
 
     before(async () => {
         // deploy CommonsBudget
@@ -217,7 +220,7 @@ describe("VoteraVote", () => {
     });
 
     it("changeCommonBudgetContract: Ownable: caller is not the owner", async () => {
-        const invalidCaller = deployer;
+        invalidCaller = deployer;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(invalidCallerVote.changeCommonBudgetContract(deployer.address)).to.be.revertedWith(
             "Ownable: caller is not the owner"
@@ -230,7 +233,7 @@ describe("VoteraVote", () => {
     });
 
     it("init: E000", async () => {
-        const invalidCaller = deployer;
+        invalidCaller = deployer;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(invalidCallerVote.init(proposal, startTime, endTime)).to.be.revertedWith("E000");
     });
@@ -247,12 +250,10 @@ describe("VoteraVote", () => {
     });
 
     it("setupVoteInfo: Ownable: caller is not the owner", async () => {
-        const openTime2 = endTime + 30;
-
-        const invalidCaller = budgetManager;
+        invalidCaller = budgetManager;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(
-            invalidCallerVote.setupVoteInfo(proposal, startTime, endTime, openTime2, "info")
+            invalidCallerVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info")
         ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -325,7 +326,7 @@ describe("VoteraVote", () => {
     });
 
     it("addValidators: Ownable: caller is not the owner", async () => {
-        const invalidCaller = budgetManager;
+        invalidCaller = budgetManager;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(
             invalidCallerVote.addValidators(
@@ -501,7 +502,7 @@ describe("VoteraVote", () => {
         const ballotVote = VoteraVoteFactory.connect(voteAddress, validators[0]);
         await ballotVote.submitBallot(proposal, commitment, signature);
 
-        const invalidCaller = deployer;
+        invalidCaller = deployer;
         const commitmentOfInvalidCaller = await makeCommitment(
             voteAddress,
             proposal,
@@ -589,11 +590,11 @@ describe("VoteraVote", () => {
 
         const ballotVote = VoteraVoteFactory.connect(voteAddress, validators[0]);
 
-        const invalidCaller = validators[1];
+        invalidCaller = validators[1];
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(invalidCallerVote.submitBallot(proposal, commitment, signature)).to.be.revertedWith("E001");
 
-        const invalidSigner = budgetManager;
+        invalidSigner = budgetManager;
         const invalidSignature = await signCommitment(invalidSigner, proposal, validators[0].address, commitment);
         await expect(ballotVote.submitBallot(proposal, commitment, invalidSignature)).to.be.revertedWith("E001");
     });
@@ -776,7 +777,7 @@ describe("VoteraVote", () => {
         const choices = validators.map((v, i) => i % 3);
         const nonces = validators.map((v, i) => i + 1);
 
-        const invalidCaller = budgetManager;
+        invalidCaller = budgetManager;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(invalidCallerVote.revealBallot(proposal, keys, choices, nonces)).to.be.revertedWith(
             "Ownable: caller is not the owner"
@@ -1023,7 +1024,7 @@ describe("VoteraVote", () => {
     });
 
     it("countVote: Ownable: caller is not the owner", async () => {
-        const invalidCaller = budgetManager;
+        invalidCaller = budgetManager;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(invalidCallerVote.countVote(proposal)).to.be.revertedWith("Ownable: caller is not the owner");
     });

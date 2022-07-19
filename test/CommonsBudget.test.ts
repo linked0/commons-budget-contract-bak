@@ -1,7 +1,7 @@
 import chai, { expect } from "chai";
 import crypto from "crypto";
 import { solidity } from "ethereum-waffle";
-import { BigNumber, utils } from "ethers";
+import { BigNumber, utils, Wallet } from "ethers";
 import { ethers, network, waffle } from "hardhat";
 import {
     CommonsBudget,
@@ -32,6 +32,8 @@ describe("Test of Commons Budget Contract", () => {
     const admin_signer = provider.getSigner(admin.address);
 
     let proposal: string;
+
+    let wrongSigner: Wallet;
 
     before(async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
@@ -259,7 +261,7 @@ describe("Test of Commons Budget Contract", () => {
             })
         ).to.be.revertedWith("InvalidInput");
 
-        const wrongSigner = admin;
+        wrongSigner = admin;
         const wrongSignProposal = await signSystemProposal(wrongSigner, proposal, title, startTime, endTime, docHash);
         await expect(
             validatorBudget.createSystemProposal(proposal, title, startTime, endTime, docHash, wrongSignProposal, {
@@ -609,7 +611,7 @@ describe("Test of Commons Budget Contract", () => {
             )
         ).to.be.revertedWith("InvalidInput");
 
-        const wrongSigner = admin;
+        wrongSigner = admin;
         const wrongSignProposal = await signFundProposal(
             wrongSigner,
             proposal,
@@ -772,7 +774,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const fundAmount = ethers.utils.parseEther("1.0");
+        const newFundAmount = ethers.utils.parseEther("1.0");
         const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
@@ -781,7 +783,7 @@ describe("Test of Commons Budget Contract", () => {
             startTime,
             endTime,
             docHash,
-            fundAmount,
+            newFundAmount,
             proposer
         );
 
@@ -792,7 +794,7 @@ describe("Test of Commons Budget Contract", () => {
             startTime,
             endTime,
             docHash,
-            fundAmount,
+            newFundAmount,
             proposer,
             signProposal,
             { value: basicFee }
@@ -813,7 +815,7 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const fundAmount = ethers.utils.parseEther("1.0");
+        const newFundAmount = ethers.utils.parseEther("1.0");
         const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
@@ -822,7 +824,7 @@ describe("Test of Commons Budget Contract", () => {
             startTime,
             endTime,
             docHash,
-            fundAmount,
+            newFundAmount,
             proposer
         );
 
@@ -833,7 +835,7 @@ describe("Test of Commons Budget Contract", () => {
             startTime,
             endTime,
             docHash,
-            fundAmount,
+            newFundAmount,
             proposer,
             signProposal,
             { value: basicFee }
