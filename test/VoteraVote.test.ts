@@ -31,7 +31,7 @@ function getNewProposal() {
     }
 }
 
-describe("VoteraVote", function () {
+describe("VoteraVote", () => {
     let budget: CommonsBudget;
 
     const provider = waffle.provider;
@@ -75,7 +75,7 @@ describe("VoteraVote", function () {
         await transactionTx.wait();
     });
 
-    beforeEach(async function () {
+    beforeEach(async () => {
         // generate random proposal id (which is address type)
         proposal = getNewProposal();
 
@@ -102,7 +102,7 @@ describe("VoteraVote", function () {
         await makeProposalTx.wait();
     });
 
-    it("Check VoteraVote normal lifecycle", async function () {
+    it("Check VoteraVote normal lifecycle", async () => {
         expect(await voteraVote.getManager()).to.be.equal(voteManager.address);
         const voteInfo = await voteraVote.voteInfos(proposal);
         expect(voteInfo.commonsBudgetAddress).equal(budget.address);
