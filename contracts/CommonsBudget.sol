@@ -28,10 +28,15 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     // Quorum = Number of validators * vote_quorum_permil / 1000000
     uint32 vote_quorum_factor;
 
+    // It is a fee to be paid for the validator that participates
+    // in a voting, which is a voter. Its unit is cent of BOA.
+    uint256 voter_fee;
+
     constructor() {
         fund_proposal_fee_permil = 10;
         system_proposal_fee = 100000000000000000000;
         vote_quorum_factor = 333333; // Number of validators / 3
+        voter_fee = 200000000000000;
     }
 
     // Proposal Fee = Funding amount * _value / 1000
@@ -59,6 +64,14 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     function getVoteQuorumFactor() public view returns (uint32) {
         return vote_quorum_factor;
+    }
+
+    function setVoterFee(uint256 _value) public onlyOwner {
+        voter_fee = _value;
+    }
+
+    function getVoterFee() public view returns (uint256) {
+        return voter_fee;
     }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {

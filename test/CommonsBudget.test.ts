@@ -100,6 +100,17 @@ describe("Test of Commons Budget Contract", () => {
         assert.deepStrictEqual(factor, 200000);
     });
 
+    it("Check Voter Fee", async () => {
+        const voterFee = await contract.getVoterFee();
+        assert.deepStrictEqual(voterFee.toNumber(), 200000000000000);
+    });
+
+    it("Set Voter Fee", async () => {
+        await contract.connect(admin_signer).setVoterFee(300000000000000);
+        const voterFee = await contract.getVoterFee();
+        assert.deepStrictEqual(voterFee.toNumber(), 300000000000000);
+    });
+
     it("changeVoteParam", async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         const testContract = (await commonsBudgetFactory.deploy()) as CommonsBudget;
