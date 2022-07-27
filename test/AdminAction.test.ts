@@ -1,6 +1,6 @@
 import chai, { expect } from "chai";
 import crypto from "crypto";
-import { solidity } from "ethereum-waffle";
+import { solidity, MockProvider } from "ethereum-waffle";
 import { BigNumber, utils, Wallet } from "ethers";
 import { ethers, network, waffle } from "hardhat";
 import {
@@ -93,5 +93,94 @@ describe("Test actions by contract owner", () => {
             true
         );
         expect(await contract.connect(admin_signer).canDistributeVoteFees(proposal)).equal(true);
+    });
+
+    it("Distribute fees to more than 500 validators", async () => {
+        let blockLatest = await ethers.provider.getBlock("latest");
+        const title = "SystemProposalTitle";
+        const startTime = blockLatest.timestamp + 30000;
+        const endTime = startTime + 30000;
+        const openTime = endTime + 30;
+        const docHash = DocHash;
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
+        const makeProposalTx = await validatorBudget.createSystemProposal(
+            proposal,
+            title,
+            startTime,
+            endTime,
+            docHash,
+            signProposal,
+            { value: basicFee }
+        );
+        await makeProposalTx.wait();
+
+        // create more validators and have 108 validators in total
+        let manyValidators: Wallet[] = validators;
+        const addCount = (await contract.vote_fee_distrib_count()).toNumber();
+        for (let i = 0; i < addCount; i++) {
+            manyValidators = manyValidators.concat(provider.createEmptyWallet());
+        }
+
+        // ready to start voting
+        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
+        const count = Math.floor(manyValidators.length / 100);
+        for (let i = 0; i < count; i++) {
+            const start = i * 100;
+            await voteraVote.addValidators(
+                proposal,
+                manyValidators.slice(start, start + 100).map((v) => v.address),
+                false
+            );
+        }
+        await voteraVote.addValidators(
+            proposal,
+            manyValidators.slice(addCount, manyValidators.length).map((v) => v.address),
+            true
+        );
+
+        // get validators' balances to be compared with their balances after paying fees
+        const prevBalances = new Map<string, BigNumber>();
+        const val_addresses = await voteraVote.getValidators(proposal);
+        expect(val_addresses.length).equals(manyValidators.length);
+        for (const address of val_addresses) {
+            prevBalances.set(address, await provider.getBalance(address));
+        }
+
+        // distribute vote fess to validators
+        const max_count_dist = (await contract.connect(admin_signer).vote_fee_distrib_count()).toNumber();
+        const dist_call_count = val_addresses.length / max_count_dist;
+        for (let i = 0; i < dist_call_count; i++) {
+            const start = i * max_count_dist;
+            await contract.distributeVoteFees(proposal, start);
+            await network.provider.send("evm_mine");
+        }
+
+        // compares voters' balances with previous balances
+        // the specified fee should be added to all the voters' balances
+        const voterFee = await contract.getVoterFee();
+        await network.provider.send("evm_mine");
+        for (const address of val_addresses) {
+            const curBalance = await provider.getBalance(address);
+            const prevBalance = prevBalances.get(address);
+            expect(curBalance.sub(prevBalance ?? 0).toNumber()).equal(voterFee.toNumber());
+        }
+
+        // try to distribute vote fess to validators AGAIN
+        for (let i = 0; i < dist_call_count; i++) {
+            const start = i * max_count_dist;
+            await contract.distributeVoteFees(proposal, start);
+            await network.provider.send("evm_mine");
+        }
+
+        // there must be no change for validators' balances although
+        // `admin` distributes vote fees again because the fees had
+        // already been distributed.
+        for (const address of val_addresses) {
+            const curBalance = await provider.getBalance(address);
+            const prevBalance = prevBalances.get(address);
+            expect(curBalance.sub(prevBalance ?? 0).toNumber()).equal(voterFee.toNumber());
+        }
     });
 });

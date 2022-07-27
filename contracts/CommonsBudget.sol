@@ -32,11 +32,16 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     // in a voting, which is a voter. Its unit is cent of BOA.
     uint256 voter_fee;
 
+    // The max count of validators that CommonsBudget can distribute
+    // vote fess to in an attempt of distribution.
+    uint256 public vote_fee_distrib_count;
+
     constructor() {
         fund_proposal_fee_permil = 10;
         system_proposal_fee = 100000000000000000000;
         vote_quorum_factor = 333333; // Number of validators / 3
         voter_fee = 200000000000000;
+        vote_fee_distrib_count = 100;
     }
 
     // Proposal Fee = Funding amount * _value / 1000
@@ -102,6 +107,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     struct ProposalFeeData {
         address payer;
         uint256 value;
+        mapping(address => bool) voteFeePaid;
     }
 
     struct ProposalData {
@@ -292,6 +298,25 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
             return true;
         } else {
             return false;
+        }
+    }
+
+    /// @notice distribute the vote fees to validators
+    /// @param _proposalID id of proposal
+    /// @param _start the start index of validators that
+    ///     is to receive a vote fee.
+    function distributeVoteFees(bytes32 _proposalID, uint256 _start) external override onlyOwner {
+        require(canDistributeVoteFees(_proposalID));
+
+        address _voteAddress = proposalMaps[_proposalID].voteAddress;
+        IVoteraVote voteraVote = IVoteraVote(_voteAddress);
+        address[] memory validators = voteraVote.getValidators(_proposalID);
+        require(_start < validators.length, "InvalidInput");
+        for (uint256 i = _start; i < validators.length && i < _start + vote_fee_distrib_count; i++) {
+            if (!feeMaps[_proposalID].voteFeePaid[validators[i]]) {
+                feeMaps[_proposalID].voteFeePaid[validators[i]] = true;
+                payable(validators[i]).transfer(voter_fee);
+            }
         }
     }
 

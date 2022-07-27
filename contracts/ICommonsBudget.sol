@@ -49,4 +49,13 @@ interface ICommonsBudget {
         uint256 validatorSize,
         uint64[] calldata voteResult
     ) external;
+
+    /// @notice distribute the vote fees to validators
+    /// @param _proposalID id of proposal
+    /// @param _start the start index of validators that
+    ///     is to receive a vote fee.
+    function distributeVoteFees(
+        bytes32 _proposalID,
+        uint256 _start
+    ) external;
 }
