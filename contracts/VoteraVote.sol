@@ -161,6 +161,13 @@ contract VoteraVote is Ownable, IVoteraVote {
         }
     }
 
+    /// @notice get validators for the proposal
+    /// @param _proposalID id of proposal
+    /// @return addresses of the validators
+    function getValidators(bytes32 _proposalID) external view override returns (address[] memory) {
+        return validators[_proposalID].keys;
+    }
+
     function isExistProposal(bytes32 _proposalID) private view returns (bool) {
         return voteInfos[_proposalID].state != VoteState.INVALID;
     }

@@ -23,6 +23,11 @@ interface IVoteraVote {
     /// @return returns the count of validators
     function getValidatorCount(bytes32 proposalID) external view returns (uint256);
 
+    /// @notice get validators for the proposal
+    /// @param _proposalID id of proposal
+    /// @return addresses of the validators
+    function getValidators(bytes32 _proposalID) external view returns (address[] memory);
+
     /// @notice get vote result of proposal
     /// @param proposalID id of proposal
     /// @return returns the result of vote
