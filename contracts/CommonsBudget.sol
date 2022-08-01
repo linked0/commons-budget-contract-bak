@@ -283,6 +283,18 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         proposalMaps[_proposalID].voteResult = _voteResult;
     }
 
+    /// @notice check if the distribution is available
+    /// @param _proposalID id of proposal
+    function canDistributeVoteFees(bytes32 _proposalID) public view returns (bool) {
+        address _voteAddress = proposalMaps[_proposalID].voteAddress;
+        IVoteraVote voteraVote = IVoteraVote(_voteAddress);
+        if (voteraVote.getValidatorListState(_proposalID) == IVoteraVote.ValidatorListState.FINALIZED) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     /// @notice get fees to be paid for the proposal
     /// @param _proposalID id of proposal
     /// @return returns fee values to be paid for the proposal

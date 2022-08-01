@@ -3,6 +3,12 @@
 pragma solidity ^0.8.0;
 
 interface IVoteraVote {
+    enum ValidatorListState {
+        INVALID,
+        SETTING,
+        FINALIZED
+    }
+
     /// @notice initialize vote
     /// @dev this is called by commons budget contract
     /// @param proposalID id of proposal
@@ -22,6 +28,10 @@ interface IVoteraVote {
     /// @param proposalID id of proposal
     /// @return returns the count of validators
     function getValidatorCount(bytes32 proposalID) external view returns (uint256);
+
+    /// @notice get validator list state
+    /// @return returns the state of validator list
+    function getValidatorListState(bytes32 _proposalID) external view returns (ValidatorListState);
 
     /// @notice get validators for the proposal
     /// @param _proposalID id of proposal

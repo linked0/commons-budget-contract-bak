@@ -32,12 +32,6 @@ contract VoteraVote is Ownable, IVoteraVote {
         uint64[] voteResult;
     }
 
-    enum ValidatorListState {
-        INVALID,
-        SETTING,
-        FINALIZED
-    }
-
     struct ValidatorMap {
         ValidatorListState state;
         address[] keys;
@@ -197,7 +191,7 @@ contract VoteraVote is Ownable, IVoteraVote {
 
     /// @notice get validator list state
     /// @return returns the state of validator list
-    function getValidatorListState(bytes32 _proposalID) public view returns (ValidatorListState) {
+    function getValidatorListState(bytes32 _proposalID) external view override returns (ValidatorListState) {
         return validators[_proposalID].state;
     }
 
