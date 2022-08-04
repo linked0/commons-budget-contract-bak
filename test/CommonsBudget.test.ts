@@ -28,7 +28,8 @@ describe("Test of Commons Budget Contract", () => {
 
     const provider = waffle.provider;
     const [admin, voteManager, ...validators] = provider.getWallets();
-    const amount = BigNumber.from(10).pow(18);
+    // set 1 million BOA for CommonsBudget contract
+    const commonsFund = BigNumber.from(10).pow(18).mul(1000000);
     const admin_signer = provider.getSigner(admin.address);
 
     let proposal: string;
@@ -54,16 +55,50 @@ describe("Test of Commons Budget Contract", () => {
         proposal = `0x${crypto.randomBytes(32).toString("hex")}`;
     });
 
+    it("Not Enough Commons Budget Fund", async () => {
+        const blockLatest = await ethers.provider.getBlock("latest");
+        const title = "FundProposalTitle";
+        const startTime = blockLatest.timestamp + 30000;
+        const endTime = startTime + 30000;
+        const docHash = DocHash;
+        const proposer = validators[0].address;
+        const signProposal = await signFundProposal(
+            voteManager,
+            proposal,
+            title,
+            startTime,
+            endTime,
+            docHash,
+            fundAmount,
+            proposer
+        );
+
+        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
+        await expect(
+            validatorBudget.createFundProposal(
+                proposal,
+                title,
+                startTime,
+                endTime,
+                DocHash,
+                fundAmount,
+                validators[0].address,
+                signProposal,
+                { value: basicFee }
+            )
+        ).to.be.revertedWith("NotEnoughBudget");
+    });
+
     it("Send", async () => {
         await provider.getSigner(admin.address).sendTransaction({
             to: contract.address,
-            value: amount,
+            value: commonsFund,
         });
     });
 
     it("Check", async () => {
         const balance = await provider.getBalance(contract.address);
-        assert.deepStrictEqual(balance, amount);
+        assert.deepStrictEqual(balance, commonsFund);
     });
 
     it("Check Proposal Fee", async () => {
@@ -551,6 +586,13 @@ describe("Test of Commons Budget Contract", () => {
         const newFactory = await ethers.getContractFactory("CommonsBudget");
         const newContract = (await newFactory.deploy()) as CommonsBudget;
         await newContract.deployed();
+
+        // send 100,000 BOA from `admin` to the new CommonsBudget contract
+        const newAmount = BigNumber.from(10).pow(18).mul(100000);
+        await provider.getSigner(admin.address).sendTransaction({
+            to: newContract.address,
+            value: newAmount,
+        });
 
         const blockLatest = await ethers.provider.getBlock("latest");
         const title = "FundProposalTitle";

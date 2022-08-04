@@ -247,6 +247,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     ) external payable override onlyInvalidProposal(_proposalID) {
         uint256 _appropriateFee = (_amount * fund_proposal_fee_permil) / 1000;
         require(msg.value >= _appropriateFee, "InvalidFee");
+        require(address(this).balance >= _amount, "NotEnoughBudget");
         require(msg.sender == _proposer, "InvalidSender");
         require(block.timestamp < _start && _start < _end, "InvalidInput");
 
