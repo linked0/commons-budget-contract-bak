@@ -19,6 +19,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         INVALID,
         CREATED,
         SETTING,
+        ASSESSING,
         RUNNING,
         FINISHED
     }
@@ -34,6 +35,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         uint64 openVote;
         string info;
         uint64[] voteResult;
+        uint64[] assessResult;
     }
 
     struct ValidatorMap {
@@ -57,6 +59,8 @@ contract VoteraVote is Ownable, IVoteraVote {
         address[] keys;
         mapping(address => Ballot) values;
         uint256 revealCount;
+        address[] assessKeys;
+        mapping(address => uint64[]) assessValues;
     }
 
     address public commonsBudgetAddress;
@@ -174,7 +178,9 @@ contract VoteraVote is Ownable, IVoteraVote {
         }
 
         if (_finalized) {
-            voteInfos[_proposalID].state = VoteState.RUNNING;
+            voteInfos[_proposalID].state = voteInfos[_proposalID].voteType == VoteType.SYSTEM
+                ? VoteState.RUNNING
+                : VoteState.ASSESSING;
         }
     }
 
@@ -200,6 +206,85 @@ contract VoteraVote is Ownable, IVoteraVote {
             voteInfos[_proposalID].state != VoteState.INVALID &&
             voteInfos[_proposalID].state != VoteState.CREATED &&
             voteInfos[_proposalID].state != VoteState.SETTING;
+    }
+
+    function isContainAssess(bytes32 _proposalId, address _address) private view returns (bool) {
+        return ballots[_proposalId].assessValues[_address].length != 0;
+    }
+
+    /// @notice submit assessment
+    /// @param _proposalID id of proposal
+    /// @param _assess assessment result
+    function submitAssess(bytes32 _proposalID, uint64[] calldata _assess) public {
+        onlyVoteWithState(_proposalID, VoteState.ASSESSING);
+        require(voteInfos[_proposalID].voteType == VoteType.FUND, "E001");
+        require(isContainValidator(_proposalID, msg.sender), "E000");
+        require(block.timestamp < voteInfos[_proposalID].endAssess, "E003");
+        require(_assess.length == 5, "E001");
+        for (uint256 i = 0; i < _assess.length; i++) {
+            require(_assess[i] >= 1 && _assess[i] <= 10, "E001");
+        }
+
+        if (isContainAssess(_proposalID, msg.sender)) {
+            ballots[_proposalID].assessValues[msg.sender] = _assess;
+        } else {
+            ballots[_proposalID].assessValues[msg.sender] = _assess;
+            ballots[_proposalID].assessKeys.push(msg.sender);
+        }
+    }
+
+    /// @notice get count of assessment
+    /// @param _proposalID id of proposal
+    /// @return returns the count of assessment
+    function getAssessCount(bytes32 _proposalID) public view returns (uint256) {
+        return ballots[_proposalID].assessKeys.length;
+    }
+
+    /// @notice get assessment address 
+    /// @param _proposalID id of proposal
+    /// @param _index index
+    /// @return returns the address of assessment of that index
+    function getAssessAt(bytes32 _proposalID, uint256 _index) public view returns (address) {
+        return ballots[_proposalID].assessKeys[_index];
+    }
+
+    /// @notice count assessment result
+    /// @param _proposalID id of proposal
+    function countAssess(bytes32 _proposalID) public onlyOwner {
+        onlyVoteWithState(_proposalID, VoteState.ASSESSING);
+        require(voteInfos[_proposalID].voteType == VoteType.FUND, "E001");
+        require(block.timestamp >= voteInfos[_proposalID].endAssess, "E004");
+
+        uint64[] memory assessResult = new uint64[](5);
+        uint256 participantSize = ballots[_proposalID].assessKeys.length;
+        for (uint256 i = 0; i < participantSize; i++) {
+            address participantAddress = ballots[_proposalID].assessKeys[i];
+            for (uint256 j = 0; j < ballots[_proposalID].assessValues[participantAddress].length; j++) {
+                assessResult[j] += ballots[_proposalID].assessValues[participantAddress][j];
+            }
+        }
+
+        voteInfos[_proposalID].state = VoteState.RUNNING;
+        voteInfos[_proposalID].assessResult = assessResult;
+
+        ICommonsBudget(voteInfos[_proposalID].commonsBudgetAddress).assessProposal(
+            _proposalID,
+            validators[_proposalID].keys.length,
+            participantSize,
+            assessResult
+        );
+    }
+
+    /// @notice get assess result
+    /// @param _proposalID id of proposal
+    /// @return returns the result of assessment
+    function getAssessResult(bytes32 _proposalID) public view returns (uint64[] memory) {
+        require(voteInfos[_proposalID].state != VoteState.INVALID, "E001");
+        require(
+            voteInfos[_proposalID].state == VoteState.RUNNING || voteInfos[_proposalID].state == VoteState.FINISHED,
+            "E002"
+        );
+        return voteInfos[_proposalID].assessResult;
     }
 
     function verifyBallot(

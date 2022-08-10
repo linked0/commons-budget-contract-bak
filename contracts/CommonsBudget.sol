@@ -85,6 +85,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
             interfaceId ==
             this.createSystemProposal.selector ^
                 this.createFundProposal.selector ^
+                this.assessProposal.selector ^
                 this.finishVote.selector ^
                 this.distributeVoteFees.selector;
     }
@@ -104,6 +105,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     enum ProposalStates {
         INVALID, // Not exist data
         CREATED, // Created
+        REJECTED, // proposal rejected by assessment before vote
+        ACCEPTED, // proposal accepted by assessment before vote
         FINISHED // The Vote contract has already notified this contract that the vote has ended
     }
 
@@ -124,6 +127,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         uint64 endAssess;
         bytes32 docHash;
         uint256 fundAmount;
+        uint256 assessParticipantSize;
+        uint64[] assessResult;
         uint256 validatorSize;
         uint64[] voteResult;
         address voteAddress;
@@ -143,9 +148,27 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     }
 
     modifier onlyNotFinishedProposal(bytes32 _proposalID) {
-        require(proposalMaps[_proposalID].state != ProposalStates.INVALID, "NotExistProposal");
+        require(proposalMaps[_proposalID].state != ProposalStates.INVALID, "NotFoundProposal");
         require(proposalMaps[_proposalID].state != ProposalStates.FINISHED, "AlreadyFinishedProposal");
-        require(proposalMaps[_proposalID].state == ProposalStates.CREATED, "InvalidState");
+        if (proposalMaps[_proposalID].proposalType == ProposalType.FUND) {
+            require(proposalMaps[_proposalID].state != ProposalStates.REJECTED, "RejectedProposal");
+            require(proposalMaps[_proposalID].state == ProposalStates.ACCEPTED, "NoAssessment");
+        } else {
+            require(proposalMaps[_proposalID].state == ProposalStates.CREATED, "InvalidState");
+        }
+        _;
+    }
+
+    modifier onlyNotAssessedFundProposal(bytes32 _proposalID) {
+        require(proposalMaps[_proposalID].state != ProposalStates.INVALID, "NotFoundProposal");
+        require(proposalMaps[_proposalID].proposalType == ProposalType.FUND, "InvalidProposal");
+        require(proposalMaps[_proposalID].state == ProposalStates.CREATED, "AlreadyFinishedAssessment");
+        require(block.timestamp >= proposalMaps[_proposalID].endAssess, "DuringAssessment");
+        _;
+    }
+
+    modifier onlyBeforeVoteStart(bytes32 _proposalID) {
+        require(block.timestamp < proposalMaps[_proposalID].start, "TooLate");
         _;
     }
 
@@ -286,8 +309,53 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         saveProposalData(ProposalType.FUND, _proposalID, _proposalInput);
     }
 
+    /// @notice save assess result of proposal
+    /// @dev this is called by vote contract
+    /// @param _proposalID id of proposal
+    /// @param _validatorSize size of valid validator of proposal
+    /// @param _assessParticipantSize size of assess participant
+    /// @param _assessResult result of assess
+    function assessProposal(
+        bytes32 _proposalID,
+        uint256 _validatorSize,
+        uint256 _assessParticipantSize,
+        uint64[] calldata _assessResult
+    )
+        external
+        override
+        onlyNotAssessedFundProposal(_proposalID)
+        onlyBeforeVoteStart(_proposalID)
+        onlyVoteContract(_proposalID)
+    {
+        proposalMaps[_proposalID].validatorSize = _validatorSize;
+        proposalMaps[_proposalID].assessParticipantSize = _assessParticipantSize;
+        proposalMaps[_proposalID].assessResult = _assessResult;
+
+        if (_assessParticipantSize > 0) {
+            uint256 minPass = 5 * _assessParticipantSize; // average 5 each
+            uint256 sum = 0;
+            for (uint256 j = 0; j < _assessResult.length; j++) {
+                if (_assessResult[j] < minPass) {
+                    proposalMaps[_proposalID].state = ProposalStates.REJECTED;
+                    return;
+                }
+                sum += _assessResult[j];
+            }
+            // check total average 7 above
+            minPass = _assessResult.length * 7 * _assessParticipantSize;
+            if (sum < minPass) {
+                proposalMaps[_proposalID].state = ProposalStates.REJECTED;
+                return;
+            }
+
+            proposalMaps[_proposalID].state = ProposalStates.ACCEPTED;
+        } else {
+            proposalMaps[_proposalID].state = ProposalStates.REJECTED;
+        }
+    }
+
     /// @notice notify that vote is finished
-    /// @dev this is called by vote manager
+    /// @dev this is called by vote contract
     /// @param _proposalID id of proposal
     /// @param _validatorSize size of valid validator of proposal's vote
     /// @param _voteResult result of proposal's vote
