@@ -8,12 +8,6 @@ enum VoteType {
 }
 
 interface IVoteraVote {
-    enum ValidatorListState {
-        INVALID,
-        SETTING,
-        FINALIZED
-    }
-
     /// @notice initialize vote
     /// @dev this is called by commons budget contract
     /// @param proposalID id of proposal
@@ -40,14 +34,15 @@ interface IVoteraVote {
     /// @return returns the count of validators
     function getValidatorCount(bytes32 proposalID) external view returns (uint256);
 
-    /// @notice get validator list state
-    /// @return returns the state of validator list
-    function getValidatorListState(bytes32 _proposalID) external view returns (ValidatorListState);
+    /// @notice get validator address at index
+    /// @param proposalID id of proposal
+    /// @param index index
+    /// @return returns the validator address at index
+    function getValidatorAt(bytes32 proposalID, uint256 index) external view returns (address);
 
-    /// @notice get validators for the proposal
-    /// @param _proposalID id of proposal
-    /// @return addresses of the validators
-    function getValidators(bytes32 _proposalID) external view returns (address[] memory);
+    /// @notice get validator list is finalized or not
+    /// @return returns true if finalized or false
+    function isValidatorListFinalized(bytes32 _proposalID) external view returns (bool);
 
     /// @notice get vote result of proposal
     /// @param proposalID id of proposal

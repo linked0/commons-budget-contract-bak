@@ -324,7 +324,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     function canDistributeVoteFees(bytes32 _proposalID) public view returns (bool) {
         address _voteAddress = proposalMaps[_proposalID].voteAddress;
         IVoteraVote voteraVote = IVoteraVote(_voteAddress);
-        if (voteraVote.getValidatorListState(_proposalID) == IVoteraVote.ValidatorListState.FINALIZED) {
+        if (voteraVote.isValidatorListFinalized(_proposalID)) {
             return true;
         } else {
             return false;
@@ -340,12 +340,13 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
         address _voteAddress = proposalMaps[_proposalID].voteAddress;
         IVoteraVote voteraVote = IVoteraVote(_voteAddress);
-        address[] memory validators = voteraVote.getValidators(_proposalID);
-        require(_start < validators.length, "InvalidInput");
-        for (uint256 i = _start; i < validators.length && i < _start + vote_fee_distrib_count; i++) {
-            if (!feeMaps[_proposalID].voteFeePaid[validators[i]]) {
-                feeMaps[_proposalID].voteFeePaid[validators[i]] = true;
-                payable(validators[i]).transfer(voter_fee);
+        uint256 validatorLength = voteraVote.getValidatorCount(_proposalID);
+        require(_start < validatorLength, "InvalidInput");
+        for (uint256 i = _start; i < validatorLength && i < _start + vote_fee_distrib_count; i++) {
+            address validator = voteraVote.getValidatorAt(_proposalID, i);
+            if (!feeMaps[_proposalID].voteFeePaid[validator]) {
+                feeMaps[_proposalID].voteFeePaid[validator] = true;
+                payable(validator).transfer(voter_fee);
             }
         }
     }
