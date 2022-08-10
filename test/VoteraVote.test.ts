@@ -1,7 +1,7 @@
 import chai, { expect } from "chai";
 import crypto from "crypto";
 import { solidity } from "ethereum-waffle";
-import { BigNumber, utils, Wallet } from "ethers";
+import { BigNumber, BigNumberish, BytesLike, utils, Wallet } from "ethers";
 import { ethers, network, waffle } from "hardhat";
 import {
     CommonsBudget,
@@ -10,12 +10,29 @@ import {
     VoteraVote__factory as VoteraVoteFactory,
     // eslint-disable-next-line node/no-missing-import
 } from "../typechain";
-import { getHash, makeCommitment, signCommitment, signSystemProposal } from "./VoteHelper";
+import { makeCommitment, signCommitment, signFundProposal, signSystemProposal } from "./VoteHelper";
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 const InvalidProposal = "0x43d26d775ef3a282483394ce041a2757fbf700c9cf86accc6f0ce410accf123f";
+const DocHash = "0x9f18669085971c1306dd0096ec531e71ad2732fd0e783068f2a3aba628613231";
 
 chai.use(solidity);
+
+function toSystemInput(title: string, start: number, end: number, docHash: BytesLike) {
+    return { start, end, startAssess: 0, endAssess: 0, docHash, amount: 0, title };
+}
+
+function toFundInput(
+    title: string,
+    start: number,
+    end: number,
+    startAssess: number,
+    endAssess: number,
+    docHash: BytesLike,
+    amount: BigNumberish
+) {
+    return { start, end, startAssess, endAssess, docHash, amount, title };
+}
 
 async function displayBalance(address: string, message: string) {
     const balance = await ethers.provider.getBalance(address);
@@ -37,6 +54,7 @@ describe("VoteraVote", () => {
     const provider = waffle.provider;
     const [deployer, budgetManager, voteManager, ...validators] = provider.getWallets();
     const basicFee = ethers.utils.parseEther("100.0");
+    const fundAmount = ethers.utils.parseEther("10000.0");
 
     let proposal: string;
     let startTime: number;
@@ -44,11 +62,67 @@ describe("VoteraVote", () => {
     let openTime: number;
     let voteAddress: string;
 
+    let startAssess: number;
+    let endAssess: number;
+
     let voteraVote: VoteraVote;
     let voteBudget: CommonsBudget;
 
     let invalidCaller: Wallet;
     let invalidSigner: Wallet;
+
+    const createSystemVote = async () => {
+        const blockLatest = await ethers.provider.getBlock("latest");
+        const title = "SystemProposalTitle";
+        startTime = blockLatest.timestamp + 86400; // 1 day
+        endTime = startTime + 86400; // 1 day
+        openTime = endTime + 30;
+        const docHash = DocHash;
+        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+
+        const validatorBudget = CommonsBudgetFactory.connect(budget.address, validators[0]);
+        const makeProposalTx = await validatorBudget.createSystemProposal(
+            proposal,
+            toSystemInput(title, startTime, endTime, docHash),
+            signProposal,
+            { value: basicFee }
+        );
+        await makeProposalTx.wait();
+    };
+
+    const createFundVote = async () => {
+        const blockLatest = await ethers.provider.getBlock("latest");
+        const title = "FundProposalTitle";
+
+        startAssess = blockLatest.timestamp;
+        endAssess = startAssess + 15000;
+        startTime = blockLatest.timestamp + 86400; // 1 day
+        endTime = startTime + 86400; // 1 day
+        openTime = endTime + 30;
+        const docHash = DocHash;
+        const proposer = validators[0].address;
+        const signProposal = await signFundProposal(
+            voteManager,
+            proposal,
+            title,
+            startTime,
+            endTime,
+            startAssess,
+            endAssess,
+            docHash,
+            fundAmount,
+            proposer
+        );
+
+        const validatorBudget = CommonsBudgetFactory.connect(budget.address, validators[0]);
+        const makeProposalTx = await validatorBudget.createFundProposal(
+            proposal,
+            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
+            signProposal,
+            { value: basicFee }
+        );
+        await makeProposalTx.wait();
+    };
 
     before(async () => {
         // deploy CommonsBudget
@@ -68,7 +142,7 @@ describe("VoteraVote", () => {
         await voteraVote.changeCommonBudgetContract(budget.address);
 
         // change parameter of budget
-        const changeParamTx = await budget.changeVoteParam(voteManager.address, voteraVote.address);
+        await budget.changeVoteParam(voteManager.address, voteraVote.address);
 
         // send test eth to budget
         const transactionTx = await deployer.sendTransaction({
@@ -76,33 +150,18 @@ describe("VoteraVote", () => {
             value: utils.parseEther("10.0"),
         });
         await transactionTx.wait();
+
+        // sending amount to budget
+        await provider.getSigner(deployer.address).sendTransaction({
+            to: budget.address,
+            value: fundAmount,
+        });
     });
 
     beforeEach(async () => {
         // generate random proposal id (which is address type)
         proposal = getNewProposal();
-
-        // get current blocktime and set vote basic parameter
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "Votera Vote Test";
-        startTime = blockLatest.timestamp + 86400; // 1 day
-        endTime = startTime + 86400; // 1 day
-        openTime = endTime + 30;
-        const docHash = getHash("bodyHash");
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
-
-        // make proposal data (by validator)
-        const validatorBudget = CommonsBudgetFactory.connect(budget.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createSystemProposal(
-            proposal,
-            title,
-            startTime,
-            endTime,
-            docHash,
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
+        await createSystemVote();
     });
 
     it("Check VoteraVote normal lifecycle", async () => {
@@ -235,7 +294,7 @@ describe("VoteraVote", () => {
     it("init: E000", async () => {
         invalidCaller = deployer;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
-        await expect(invalidCallerVote.init(proposal, startTime, endTime)).to.be.revertedWith("E000");
+        await expect(invalidCallerVote.init(proposal, 0, startTime, endTime, 0, 0)).to.be.revertedWith("E000");
     });
 
     it("setupVoteInfo", async () => {

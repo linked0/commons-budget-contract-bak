@@ -24,7 +24,10 @@ contract VoteraVote is Ownable, IVoteraVote {
 
     struct VoteInfo {
         VoteState state;
+        VoteType voteType;
         address commonsBudgetAddress;
+        uint64 startAssess;
+        uint64 endAssess;
         uint64 startVote;
         uint64 endVote;
         uint64 openVote;
@@ -80,12 +83,18 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @notice initialize vote
     /// @dev this is called by commons budget contract
     /// @param _proposalID id of proposal
+    /// @param _voteType type of vote
     /// @param _startVote vote starting time (seconds since the epoch)
     /// @param _endVote vote ending time (seconds since the epoch)
+    /// @param _startAssess assess starting time (seconds since the epoch)
+    /// @param _endAssess assess ending time (seconds since the epoch)
     function init(
         bytes32 _proposalID,
+        VoteType _voteType,
         uint64 _startVote,
-        uint64 _endVote
+        uint64 _endVote,
+        uint64 _startAssess,
+        uint64 _endAssess
     ) external override {
         require(msg.sender == commonsBudgetAddress, "E000");
         require(
@@ -94,11 +103,17 @@ contract VoteraVote is Ownable, IVoteraVote {
             "E001"
         );
         require(block.timestamp < _startVote && _startVote < _endVote, "E001");
+        if (_voteType == VoteType.FUND) {
+            require(block.timestamp < _endAssess && _startAssess < _endAssess && _endAssess < _startVote, "E001");
+        }
 
         voteInfos[_proposalID].state = VoteState.CREATED;
+        voteInfos[_proposalID].voteType = _voteType;
         voteInfos[_proposalID].commonsBudgetAddress = commonsBudgetAddress;
         voteInfos[_proposalID].startVote = _startVote;
         voteInfos[_proposalID].endVote = _endVote;
+        voteInfos[_proposalID].startAssess = _startAssess;
+        voteInfos[_proposalID].endAssess = _endAssess;
     }
 
     /// @notice set additional vote information

@@ -44,13 +44,15 @@ export function signFundProposal(
     title: string,
     start: BigNumberish,
     end: BigNumberish,
+    startAssess: BigNumberish,
+    endAssess: BigNumberish,
     docHash: string,
     amount: BigNumberish,
     proposer: string
 ): Promise<string> {
     const encodedResult = ethers.utils.defaultAbiCoder.encode(
-        ["bytes32", "string", "uint64", "uint64", "bytes32", "uint256", "address"],
-        [proposalID, title, start, end, docHash, amount, proposer]
+        ["bytes32", "string", "uint64", "uint64", "uint64", "uint64", "bytes32", "uint256", "address"],
+        [proposalID, title, start, end, startAssess, endAssess, docHash, amount, proposer]
     );
     const sig = signer._signingKey().signDigest(ethers.utils.keccak256(encodedResult));
     return Promise.resolve(ethers.utils.joinSignature(sig));

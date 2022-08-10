@@ -63,10 +63,7 @@ describe("Test actions by contract owner", () => {
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createSystemProposal(
             proposal,
-            title,
-            startTime,
-            endTime,
-            docHash,
+            { start: startTime, end: endTime, startAssess: 0, endAssess: 0, docHash, amount: 0, title },
             signProposal,
             { value: basicFee }
         );
@@ -106,10 +103,7 @@ describe("Test actions by contract owner", () => {
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createSystemProposal(
             proposal,
-            title,
-            startTime,
-            endTime,
-            docHash,
+            { start: startTime, end: endTime, startAssess: 0, endAssess: 0, docHash, amount: 0, title },
             signProposal,
             { value: basicFee }
         );

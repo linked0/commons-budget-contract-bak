@@ -83,7 +83,10 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         return
             interfaceId == this.supportsInterface.selector ||
             interfaceId ==
-            this.createSystemProposal.selector ^ this.createFundProposal.selector ^ this.finishVote.selector;
+            this.createSystemProposal.selector ^
+                this.createFundProposal.selector ^
+                this.finishVote.selector ^
+                this.distributeVoteFees.selector;
     }
 
     /// @notice vote manager is votera vote server
@@ -113,12 +116,14 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     struct ProposalData {
         ProposalStates state;
         ProposalType proposalType;
+        address proposer;
         string title;
         uint64 start;
         uint64 end;
+        uint64 startAssess;
+        uint64 endAssess;
         bytes32 docHash;
         uint256 fundAmount;
-        address proposer;
         uint256 validatorSize;
         uint64[] voteResult;
         address voteAddress;
@@ -140,6 +145,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     modifier onlyNotFinishedProposal(bytes32 _proposalID) {
         require(proposalMaps[_proposalID].state != ProposalStates.INVALID, "NotExistProposal");
         require(proposalMaps[_proposalID].state != ProposalStates.FINISHED, "AlreadyFinishedProposal");
+        require(proposalMaps[_proposalID].state == ProposalStates.CREATED, "InvalidState");
         _;
     }
 
@@ -169,92 +175,115 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     function initVote(
         bytes32 _proposalID,
+        ProposalType _proposalType,
         uint64 _start,
-        uint64 _end
+        uint64 _end,
+        uint64 _startAssess,
+        uint64 _endAssess
     ) internal returns (address) {
         require(voteAddress != address(0) && voteManager != address(0), "NotReady");
-        IVoteraVote(voteAddress).init(_proposalID, _start, _end);
+        IVoteraVote(voteAddress).init(
+            _proposalID,
+            _proposalType == ProposalType.SYSTEM ? VoteType.SYSTEM : VoteType.FUND,
+            _start,
+            _end,
+            _startAssess,
+            _endAssess
+        );
         return voteAddress;
     }
 
     function saveProposalData(
         ProposalType _proposalType,
         bytes32 _proposalID,
-        string calldata _title,
-        uint64 _start,
-        uint64 _end,
-        bytes32 _docHash,
-        uint256 _amount,
-        address _proposer
+        ProposalInput calldata _proposalInput
     ) private {
         proposalMaps[_proposalID].state = ProposalStates.CREATED;
         proposalMaps[_proposalID].proposalType = _proposalType;
-        proposalMaps[_proposalID].title = _title;
-        proposalMaps[_proposalID].start = _start;
-        proposalMaps[_proposalID].end = _end;
-        proposalMaps[_proposalID].docHash = _docHash;
-        proposalMaps[_proposalID].fundAmount = _amount;
-        proposalMaps[_proposalID].proposer = _proposer;
+        proposalMaps[_proposalID].title = _proposalInput.title;
+        proposalMaps[_proposalID].start = _proposalInput.start;
+        proposalMaps[_proposalID].end = _proposalInput.end;
+        proposalMaps[_proposalID].startAssess = _proposalInput.startAssess;
+        proposalMaps[_proposalID].endAssess = _proposalInput.endAssess;
+        proposalMaps[_proposalID].docHash = _proposalInput.docHash;
+        proposalMaps[_proposalID].fundAmount = _proposalInput.amount;
+        proposalMaps[_proposalID].proposer = msg.sender;
 
         feeMaps[_proposalID].value = msg.value;
         feeMaps[_proposalID].payer = msg.sender;
 
-        proposalMaps[_proposalID].voteAddress = initVote(_proposalID, _start, _end);
+        proposalMaps[_proposalID].voteAddress = initVote(
+            _proposalID,
+            _proposalType,
+            _proposalInput.start,
+            _proposalInput.end,
+            _proposalInput.startAssess,
+            _proposalInput.endAssess
+        );
     }
 
     /// @notice create system proposal
     /// @param _proposalID id of proposal
-    /// @param _title title of proposal
-    /// @param _start vote starting time (seconds since the epoch)
-    /// @param _end vote ending time (seconds since the epoch)
-    /// @param _docHash hash data of proposal description and attachment
+    /// @param _proposalInput input data of proposal
     /// @param _signature signature data from vote manager of proposal
     function createSystemProposal(
         bytes32 _proposalID,
-        string calldata _title,
-        uint64 _start,
-        uint64 _end,
-        bytes32 _docHash,
+        ProposalInput calldata _proposalInput,
         bytes calldata _signature
     ) external payable override onlyInvalidProposal(_proposalID) {
         require(msg.value >= system_proposal_fee, "InvalidFee");
-        require(block.timestamp < _start && _start < _end, "InvalidInput");
+        require(block.timestamp < _proposalInput.start && _proposalInput.start < _proposalInput.end, "InvalidInput");
 
-        bytes32 dataHash = keccak256(abi.encode(_proposalID, _title, _start, _end, _docHash));
+        bytes32 dataHash = keccak256(
+            abi.encode(
+                _proposalID,
+                _proposalInput.title,
+                _proposalInput.start,
+                _proposalInput.end,
+                _proposalInput.docHash
+            )
+        );
         require(ECDSA.recover(dataHash, _signature) == voteManager, "InvalidInput");
 
-        saveProposalData(ProposalType.SYSTEM, _proposalID, _title, _start, _end, _docHash, 0, msg.sender);
+        saveProposalData(ProposalType.SYSTEM, _proposalID, _proposalInput);
     }
 
     /// @notice create fund proposal
     /// @param _proposalID id of proposal
-    /// @param _title title of proposal
-    /// @param _start vote starting time (seconds since the epoch)
-    /// @param _end vote ending time (seconds since the epoch)
-    /// @param _docHash hash data of proposal description and attachment
-    /// @param _amount requesting fund amount
-    /// @param _proposer address of proposer
+    /// @param _proposalInput input data of proposal
     /// @param _signature signature data from vote manager of proposal
     function createFundProposal(
         bytes32 _proposalID,
-        string calldata _title,
-        uint64 _start,
-        uint64 _end,
-        bytes32 _docHash,
-        uint256 _amount,
-        address _proposer,
+        ProposalInput calldata _proposalInput,
         bytes calldata _signature
     ) external payable override onlyInvalidProposal(_proposalID) {
-        uint256 _appropriateFee = (_amount * fund_proposal_fee_permil) / 1000;
+        uint256 _appropriateFee = (_proposalInput.amount * fund_proposal_fee_permil) / 1000;
         require(msg.value >= _appropriateFee, "InvalidFee");
-        require(address(this).balance >= _amount, "NotEnoughBudget");
-        require(msg.sender == _proposer, "InvalidSender");
-        require(block.timestamp < _start && _start < _end, "InvalidInput");
+        require(address(this).balance >= _proposalInput.amount, "NotEnoughBudget");
+        require(
+            block.timestamp < _proposalInput.endAssess &&
+                _proposalInput.startAssess < _proposalInput.endAssess &&
+                _proposalInput.endAssess < _proposalInput.start &&
+                _proposalInput.start < _proposalInput.end,
+            "InvalidInput"
+        );
 
-        bytes32 dataHash = keccak256(abi.encode(_proposalID, _title, _start, _end, _docHash, _amount, _proposer));
+        bytes32 dataHash = keccak256(
+            abi.encode(
+                _proposalID,
+                _proposalInput.title,
+                _proposalInput.start,
+                _proposalInput.end,
+                _proposalInput.startAssess,
+                _proposalInput.endAssess,
+                _proposalInput.docHash,
+                _proposalInput.amount,
+                msg.sender
+            )
+        );
         require(ECDSA.recover(dataHash, _signature) == voteManager, "InvalidInput");
 
-        saveProposalData(ProposalType.FUND, _proposalID, _title, _start, _end, _docHash, _amount, _proposer);
+        saveProposalData(ProposalType.FUND, _proposalID, _proposalInput);
     }
 
     /// @notice notify that vote is finished

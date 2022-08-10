@@ -3,39 +3,33 @@
 pragma solidity ^0.8.0;
 
 interface ICommonsBudget {
+    struct ProposalInput {
+        uint64 start; // vote starting time (seconds since the epoch)
+        uint64 end; // vote ending time (seconds since the epoch)
+        uint64 startAssess; // assessment starting time for fund proposal (seconds since the epoch)
+        uint64 endAssess; // assessment ending time for fund proposal (seconds since the epoch)
+        uint256 amount; // requesting fund amount
+        bytes32 docHash; // hash data of proposal description and attachment
+        string title; // title of proposal
+    }
+
     /// @notice create system proposal
     /// @param proposalID id of proposal
-    /// @param title title of proposal
-    /// @param start vote starting time (seconds since the epoch)
-    /// @param end vote ending time (seconds since the epoch)
-    /// @param docHash hash data of proposal description and attachment
+    /// @param proposalInput input data of proposal
     /// @param signature signature data from vote manager of proposal
     function createSystemProposal(
         bytes32 proposalID,
-        string calldata title,
-        uint64 start,
-        uint64 end,
-        bytes32 docHash,
+        ProposalInput calldata proposalInput,
         bytes calldata signature
     ) external payable;
 
     /// @notice create fund proposal
     /// @param proposalID id of proposal
-    /// @param title title of proposal
-    /// @param start vote starting time (seconds since the epoch)
-    /// @param end vote ending time (seconds since the epoch)
-    /// @param docHash hash data of proposal description and attachment
-    /// @param amount requesting fund amount
-    /// @param proposer address of proposer
+    /// @param proposalInput input data of proposal
     /// @param signature signature data from vote manager of proposal
     function createFundProposal(
         bytes32 proposalID,
-        string calldata title,
-        uint64 start,
-        uint64 end,
-        bytes32 docHash,
-        uint256 amount,
-        address proposer,
+        ProposalInput calldata proposalInput,
         bytes calldata signature
     ) external payable;
 
