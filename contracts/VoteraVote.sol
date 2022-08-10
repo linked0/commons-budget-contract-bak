@@ -136,8 +136,8 @@ contract VoteraVote is Ownable, IVoteraVote {
     ) public onlyOwner {
         onlyVoteWithState(_proposalID, VoteState.CREATED);
         require(block.timestamp < _startVote, "E001");
-        require(0 < _startVote && _startVote < _endVote && _endVote < _openVote, "E001");
         require(voteInfos[_proposalID].startVote == _startVote && voteInfos[_proposalID].endVote == _endVote, "E002");
+        require(_endVote < _openVote, "E001");
 
         voteInfos[_proposalID].state = VoteState.SETTING;
         voteInfos[_proposalID].openVote = _openVote;
@@ -260,17 +260,17 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @param _validator address of validator
     /// @return returns the ballot of validator
     function getBallot(bytes32 _proposalID, address _validator) public view returns (Ballot memory) {
+        require(voteInfos[_proposalID].state != VoteState.INVALID, "E001");
+        require(block.timestamp >= voteInfos[_proposalID].endVote, "E004");
         return ballots[_proposalID].values[_validator];
     }
 
-    /// @notice get ballot at that index
+    /// @notice get ballot address at that index
     /// @param _proposalID id of proposal
     /// @param _index index
-    /// @return returns the ballot at that index
-    function getBallotAt(bytes32 _proposalID, uint256 _index) public view returns (Ballot memory) {
-        require(voteInfos[_proposalID].state != VoteState.INVALID && _index < getBallotCount(_proposalID), "E001");
-        require(block.timestamp >= voteInfos[_proposalID].endVote && voteInfos[_proposalID].endVote > 0, "E004");
-        return ballots[_proposalID].values[ballots[_proposalID].keys[_index]];
+    /// @return returns the ballot address at that index
+    function getBallotAt(bytes32 _proposalID, uint256 _index) public view returns (address) {
+        return ballots[_proposalID].keys[_index];
     }
 
     /// @notice submit revealed ballot after end of vote
@@ -291,20 +291,20 @@ contract VoteraVote is Ownable, IVoteraVote {
             "E001"
         );
         require(voteInfos[_proposalID].state == VoteState.RUNNING, "E002");
-        require(block.timestamp >= voteInfos[_proposalID].openVote && voteInfos[_proposalID].openVote > 0, "E004");
+        require(block.timestamp >= voteInfos[_proposalID].openVote, "E004");
 
         address voteContract = address(this);
         uint256 len = _validators.length;
         uint256 _revealCount = ballots[_proposalID].revealCount;
+        address _validator;
+        bytes32 dataHash;
 
         for (uint256 i = 0; i < len; ++i) {
-            address _validator = _validators[i];
+            _validator = _validators[i];
             if (isContainBallot(_proposalID, _validator)) {
                 require(_nonces[i] != 0, "E001");
 
-                bytes32 dataHash = keccak256(
-                    abi.encode(voteContract, _proposalID, _validator, _choices[i], _nonces[i])
-                );
+                dataHash = keccak256(abi.encode(voteContract, _proposalID, _validator, _choices[i], _nonces[i]));
                 require(dataHash == ballots[_proposalID].values[_validator].commitment, "E001");
 
                 if (ballots[_proposalID].values[_validator].nonce == 0) {
