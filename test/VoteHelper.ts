@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import crypto from "crypto";
 import { BigNumberish, Wallet } from "ethers";
 import { ethers } from "hardhat";

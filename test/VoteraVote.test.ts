@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 import chai, { expect } from "chai";
 import crypto from "crypto";
 import { solidity } from "ethereum-waffle";
@@ -8,7 +9,6 @@ import {
     CommonsBudget__factory as CommonsBudgetFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
-    // eslint-disable-next-line node/no-missing-import
 } from "../typechain";
 import { makeCommitment, signCommitment, signFundProposal, signSystemProposal } from "./VoteHelper";
 
@@ -36,7 +36,7 @@ function toFundInput(
 
 async function displayBalance(address: string, message: string) {
     const balance = await ethers.provider.getBalance(address);
-    console.log(`${message}_balance = ${balance}`);
+    console.log(`${message}_balance = ${balance.toString()}`);
 }
 
 function getNewProposal() {
@@ -51,7 +51,7 @@ function getNewProposal() {
 describe("VoteraVote", () => {
     let budget: CommonsBudget;
 
-    const provider = waffle.provider;
+    const { provider } = waffle;
     const [deployer, budgetManager, voteManager, ...validators] = provider.getWallets();
     const basicFee = ethers.utils.parseEther("100.0");
     const fundAmount = ethers.utils.parseEther("10000.0");
@@ -158,7 +158,7 @@ describe("VoteraVote", () => {
         });
     });
 
-    beforeEach(async () => {
+    beforeEach(() => {
         // generate random proposal id (which is address type)
         proposal = getNewProposal();
     });
@@ -270,7 +270,7 @@ describe("VoteraVote", () => {
             expect(voteResult[i]).equal(expectVoteCounts[i]);
         }
 
-        displayBalance(voteManager.address, "end_ - system");
+        await displayBalance(voteManager.address, "end_ - system");
 
         const proposalData = await voteBudget.getProposalData(proposal);
         expect(proposalData.validatorSize).equal(validatorCount);
@@ -402,7 +402,7 @@ describe("VoteraVote", () => {
             expect(voteResult[i]).equal(expectVoteCounts[i]);
         }
 
-        displayBalance(voteManager.address, "end_ - fund");
+        await displayBalance(voteManager.address, "end_ - fund");
 
         const proposalData = await voteBudget.getProposalData(proposal);
         expect(proposalData.validatorSize).equal(validatorCount);
@@ -799,7 +799,7 @@ describe("VoteraVote", () => {
 
         await voteraVote.countAssess(proposal);
 
-        let voteInfo = await voteraVote.voteInfos(proposal);
+        const voteInfo = await voteraVote.voteInfos(proposal);
         expect(voteInfo.state, "RUNNING").equal(4); // RUNNING
         const assessResult = await voteraVote.getAssessResult(proposal);
         expect(assessResult).to.eql(assessValue.map((v) => BigNumber.from(v * validators.length)));
@@ -830,7 +830,7 @@ describe("VoteraVote", () => {
 
         await voteraVote.countAssess(proposal);
 
-        let voteInfo = await voteraVote.voteInfos(proposal);
+        const voteInfo = await voteraVote.voteInfos(proposal);
         expect(voteInfo.state, "RUNNING").equal(4); // RUNNING
         const assessResult = await voteraVote.getAssessResult(proposal);
         expect(assessResult).to.eql(assessValue.map((v) => BigNumber.from(v * validators.length)));
@@ -1009,7 +1009,7 @@ describe("VoteraVote", () => {
         // wait until endTime
         await network.provider.send("evm_increaseTime", [86400]);
         await network.provider.send("evm_mine");
-        
+
         const ballot1 = await ballotVote1.getBallot(proposal, validators[1].address);
         expect(ballot1.key).equal(validators[1].address);
         expect(ballot1.choice).equal(BigNumber.from(0));
@@ -1206,7 +1206,7 @@ describe("VoteraVote", () => {
 
         const ballotVote = VoteraVoteFactory.connect(voteAddress, validators[0]);
 
-        invalidCaller = validators[1];
+        [, invalidCaller] = validators;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
         await expect(invalidCallerVote.submitBallot(proposal, commitment, signature)).to.be.revertedWith("E001");
 

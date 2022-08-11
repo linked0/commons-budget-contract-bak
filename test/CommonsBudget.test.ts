@@ -1,8 +1,10 @@
+/* eslint-disable no-await-in-loop */
 import chai, { expect } from "chai";
 import crypto from "crypto";
 import { solidity } from "ethereum-waffle";
 import { BigNumber, BigNumberish, BytesLike, Wallet } from "ethers";
 import { ethers, network, waffle } from "hardhat";
+import * as assert from "assert";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
@@ -10,8 +12,6 @@ import {
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
 import { makeCommitment, signCommitment, signFundProposal, signSystemProposal } from "./VoteHelper";
-
-import * as assert from "assert";
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 const AddressNormal = "0xcD958D25697A04B0e55BF13c5ADE051beE046354";
@@ -46,11 +46,11 @@ describe("Test of Commons Budget Contract", () => {
     const passAssessResult = [7, 7, 7, 7, 7];
     const rejectedAssessResult = [6, 6, 6, 6, 6];
 
-    const provider = waffle.provider;
+    const { provider } = waffle;
     const [admin, voteManager, ...validators] = provider.getWallets();
     // set 1 million BOA for CommonsBudget contract
     const commonsFund = BigNumber.from(10).pow(18).mul(1000000);
-    const admin_signer = provider.getSigner(admin.address);
+    const adminSigner = provider.getSigner(admin.address);
 
     let proposal: string;
 
@@ -58,7 +58,7 @@ describe("Test of Commons Budget Contract", () => {
 
     before(async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-        contract = (await commonsBudgetFactory.deploy()) as CommonsBudget;
+        contract = await commonsBudgetFactory.deploy();
         await contract.deployed();
 
         const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
@@ -131,16 +131,16 @@ describe("Test of Commons Budget Contract", () => {
         const originalFeePermil = await contract.getFundProposalFeePermil();
         const originalProposalFee = await contract.getSystemProposalFee();
 
-        await contract.connect(admin_signer).setFundProposalFeePermil(20);
-        await contract.connect(admin_signer).setSystemProposalFee(BigNumber.from(500).mul(BigNumber.from(10).pow(18)));
+        await contract.connect(adminSigner).setFundProposalFeePermil(20);
+        await contract.connect(adminSigner).setSystemProposalFee(BigNumber.from(500).mul(BigNumber.from(10).pow(18)));
 
         const fundProposalFee = await contract.getFundProposalFeePermil();
         assert.deepStrictEqual(fundProposalFee.toString(), "20");
         const systemProposalFe = await contract.getSystemProposalFee();
         assert.deepStrictEqual(systemProposalFe.toString(), "500000000000000000000");
 
-        await contract.connect(admin_signer).setFundProposalFeePermil(originalFeePermil);
-        await contract.connect(admin_signer).setSystemProposalFee(originalProposalFee);
+        await contract.connect(adminSigner).setFundProposalFeePermil(originalFeePermil);
+        await contract.connect(adminSigner).setSystemProposalFee(originalProposalFee);
     });
 
     it("Check Quorum Factor", async () => {
@@ -149,7 +149,7 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     it("Set Quorum Factor", async () => {
-        await contract.connect(admin_signer).setVoteQuorumFactor(200000);
+        await contract.connect(adminSigner).setVoteQuorumFactor(200000);
         const factor = await contract.getVoteQuorumFactor();
         assert.deepStrictEqual(factor, 200000);
     });
@@ -160,14 +160,14 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     it("Set Voter Fee", async () => {
-        await contract.connect(admin_signer).setVoterFee(300000000000000);
+        await contract.connect(adminSigner).setVoterFee(300000000000000);
         const voterFee = await contract.getVoterFee();
         assert.deepStrictEqual(voterFee.toNumber(), 300000000000000);
     });
 
     it("changeVoteParam", async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-        const testContract = (await commonsBudgetFactory.deploy()) as CommonsBudget;
+        const testContract = await commonsBudgetFactory.deploy();
         await testContract.deployed();
 
         await testContract.changeVoteParam(admin.address, contract.address);
@@ -219,7 +219,7 @@ describe("Test of Commons Budget Contract", () => {
 
         // make sure proposal is initialized in voteraVote
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const voteAddress = (await voteBudget.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await voteBudget.getProposalData(proposal);
         expect(voteAddress).equal(voteraVote.address);
 
         const voteInfo = await voteraVote.voteInfos(proposal);
@@ -303,7 +303,7 @@ describe("Test of Commons Budget Contract", () => {
 
     it("createSystemProposal: InvalidInput - without initializing", async () => {
         const newFactory = await ethers.getContractFactory("CommonsBudget");
-        const newContract = (await newFactory.deploy()) as CommonsBudget;
+        const newContract = await newFactory.deploy();
         await newContract.deployed();
 
         const title = "SystemProposalTitle";
@@ -404,7 +404,7 @@ describe("Test of Commons Budget Contract", () => {
         // make sure proposal is initialized in voteraVote
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
 
-        const voteAddress = (await voteBudget.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await voteBudget.getProposalData(proposal);
         expect(voteAddress).equal(voteraVote.address);
 
         const voteInfo = await voteraVote.voteInfos(proposal);
@@ -612,7 +612,7 @@ describe("Test of Commons Budget Contract", () => {
 
     it("createFundProposal: InvalidInput - without initializing", async () => {
         const newFactory = await ethers.getContractFactory("CommonsBudget");
-        const newContract = (await newFactory.deploy()) as CommonsBudget;
+        const newContract = await newFactory.deploy();
         await newContract.deployed();
 
         // send 100,000 BOA from `admin` to the new CommonsBudget contract
@@ -844,7 +844,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         const expectVoteCounts = await recordVote(voteAddress, false, true);
 
         const proposalData = await contract.getProposalData(proposal);
@@ -884,7 +884,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         const expectVoteCounts = await recordVote(voteAddress, false, false);
 
         const proposalData = await contract.getProposalData(proposal);
@@ -923,7 +923,7 @@ describe("Test of Commons Budget Contract", () => {
             { value: basicFee }
         );
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
 
         const openTime = endTime + 30;
 
@@ -1001,7 +1001,7 @@ describe("Test of Commons Budget Contract", () => {
 
     it("assessProposal: NotFoundProposal", async () => {
         const assessParticipantSize = 10;
-        const assessResult = Array(5).fill(BigNumber.from(100));
+        const assessResult = Array<BigNumber>(5).fill(BigNumber.from(100));
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         await expect(
@@ -1062,7 +1062,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         const expectVoteCounts = await recordVote(voteAddress, true, true);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
@@ -1102,7 +1102,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         const expectVoteCounts = await recordVote(voteAddress, false, false);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
@@ -1142,7 +1142,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         const expectVoteCounts = await recordVote(voteAddress, false, true);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
@@ -1189,9 +1189,8 @@ describe("Test of Commons Budget Contract", () => {
             true
         );
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
 
-        const assessCount = 2;
         const assessResult = [10, 10, 10, 10, 10];
         for (let i = 0; i < assessCount; i += 1) {
             const assessVote = VoteraVoteFactory.connect(voteAddress, validators[i]);
@@ -1244,9 +1243,7 @@ describe("Test of Commons Budget Contract", () => {
         await expect(voteBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "NotAuthorized"
         );
-        await expect(contract.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
-            "NotAuthorized"
-        );
+        await expect(contract.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith("NotAuthorized");
         await expect(validatorBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "NotAuthorized"
         );
@@ -1270,7 +1267,7 @@ describe("Test of Commons Budget Contract", () => {
         await makeProposalTx.wait();
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const voteAddress = (await voteBudget.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await voteBudget.getProposalData(proposal);
 
         const expectedCounts = await recordVote(voteAddress, true, undefined);
 
@@ -1312,7 +1309,7 @@ describe("Test of Commons Budget Contract", () => {
         await makeProposalTx.wait();
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const voteAddress = (await voteBudget.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await voteBudget.getProposalData(proposal);
 
         const expectedCounts = await recordVote(voteAddress, true, true);
 
@@ -1359,7 +1356,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         const expectVoteCounts = await recordVote(voteAddress, true, true);
 
         const validatorCount = await voteraVote.getValidatorCount(proposal);
@@ -1406,7 +1403,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         await recordVote(voteAddress, true, false);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
@@ -1483,7 +1480,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         await recordVote(voteAddress, false, true);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
@@ -1522,7 +1519,7 @@ describe("Test of Commons Budget Contract", () => {
         );
         await makeProposalTx.wait();
 
-        const voteAddress = (await contract.getProposalData(proposal)).voteAddress;
+        const { voteAddress } = await contract.getProposalData(proposal);
         const expectVoteCounts = await recordVote(voteAddress, false, true);
 
         // wait for endTime

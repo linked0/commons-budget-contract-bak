@@ -3,25 +3,23 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { CommonsBudget, VoteraVote } from "../typechain";
-
 import { Wallet } from "ethers";
 import { ethers } from "hardhat";
 
 async function main() {
-    const CommonsBudget = await ethers.getContractFactory("CommonsBudget");
-    const VoteraVote = await ethers.getContractFactory("VoteraVote");
+    const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
+    const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
 
-    const provider_ethnet = ethers.provider;
+    const providerEthnet = ethers.provider;
 
     const admin = new Wallet(process.env.ADMIN_KEY || "");
-    const adminSigner = provider_ethnet.getSigner(admin.address);
-    const commonsBudget = (await CommonsBudget.connect(adminSigner).deploy()) as CommonsBudget;
+    const adminSigner = providerEthnet.getSigner(admin.address);
+    const commonsBudget = await commonsBudgetFactory.connect(adminSigner).deploy();
     await commonsBudget.deployed();
 
     const voteManager = new Wallet(process.env.VOTE_KEY || "");
-    const voteManagerSigner = provider_ethnet.getSigner(voteManager.address);
-    const voteraVote = (await VoteraVote.connect(voteManagerSigner).deploy()) as VoteraVote;
+    const voteManagerSigner = providerEthnet.getSigner(voteManager.address);
+    const voteraVote = await voteraVoteFactory.connect(voteManagerSigner).deploy();
     await voteraVote.deployed();
 
     await commonsBudget.changeVoteParam(voteManager.address, voteraVote.address);

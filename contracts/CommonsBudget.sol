@@ -19,18 +19,18 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     // It is a fee for the funding proposal. This is not a unit of BOA.
     // This is a thousand percent.
     // Proposal Fee = Funding amount * fund_proposal_fee_permil / 1000
-    uint32 fund_proposal_fee_permil;
+    uint32 private fund_proposal_fee_permil;
 
     // It is a fee for system proposals. Its unit is cent of BOA.
-    uint256 system_proposal_fee;
+    uint256 private system_proposal_fee;
 
     // Factor required to calculate a valid quorum
     // Quorum = Number of validators * vote_quorum_permil / 1000000
-    uint32 vote_quorum_factor;
+    uint32 private vote_quorum_factor;
 
     // It is a fee to be paid for the validator that participates
     // in a voting, which is a voter. Its unit is cent of BOA.
-    uint256 voter_fee;
+    uint256 private voter_fee;
 
     // The max count of validators that CommonsBudget can distribute
     // vote fess to in an attempt of distribution.
