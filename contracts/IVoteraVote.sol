@@ -2,23 +2,18 @@
 
 pragma solidity ^0.8.0;
 
-enum VoteType {
-    SYSTEM,
-    FUND
-}
-
 interface IVoteraVote {
     /// @notice initialize vote
     /// @dev this is called by commons budget contract
     /// @param proposalID id of proposal
-    /// @param voteType type of vote
+    /// @param useAssess true if assessment is necessary or not
     /// @param startVote vote starting time (seconds since the epoch)
     /// @param endVote vote ending time (seconds since the epoch)
     /// @param startAssess assess starting time (seconds since the epoch)
     /// @param endAssess assess ending time (seconds since the epoch)
     function init(
         bytes32 proposalID,
-        VoteType voteType,
+        bool useAssess,
         uint64 startVote,
         uint64 endVote,
         uint64 startAssess,

@@ -207,7 +207,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         require(voteAddress != address(0) && voteManager != address(0), "NotReady");
         IVoteraVote(voteAddress).init(
             _proposalID,
-            _proposalType == ProposalType.SYSTEM ? VoteType.SYSTEM : VoteType.FUND,
+            _proposalType == ProposalType.FUND ? true : false,
             _start,
             _end,
             _startAssess,

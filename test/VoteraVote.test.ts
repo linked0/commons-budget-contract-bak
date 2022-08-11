@@ -431,7 +431,7 @@ describe("VoteraVote", () => {
     it("init: E000", async () => {
         invalidCaller = deployer;
         const invalidCallerVote = VoteraVoteFactory.connect(voteAddress, invalidCaller);
-        await expect(invalidCallerVote.init(proposal, 0, startTime, endTime, 0, 0)).to.be.revertedWith("E000");
+        await expect(invalidCallerVote.init(proposal, false, startTime, endTime, 0, 0)).to.be.revertedWith("E000");
     });
 
     it("setupVoteInfo", async () => {

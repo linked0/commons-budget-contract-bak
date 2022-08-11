@@ -24,9 +24,11 @@ contract VoteraVote is Ownable, IVoteraVote {
         FINISHED
     }
 
+    uint public constant ASSESS_ITEM_SIZE = 5;
+
     struct VoteInfo {
         VoteState state;
-        VoteType voteType;
+        bool useAssess;
         address commonsBudgetAddress;
         uint64 startAssess;
         uint64 endAssess;
@@ -87,14 +89,14 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @notice initialize vote
     /// @dev this is called by commons budget contract
     /// @param _proposalID id of proposal
-    /// @param _voteType type of vote
+    /// @param _useAssess true if assessment process is necessary or not
     /// @param _startVote vote starting time (seconds since the epoch)
     /// @param _endVote vote ending time (seconds since the epoch)
     /// @param _startAssess assess starting time (seconds since the epoch)
     /// @param _endAssess assess ending time (seconds since the epoch)
     function init(
         bytes32 _proposalID,
-        VoteType _voteType,
+        bool _useAssess,
         uint64 _startVote,
         uint64 _endVote,
         uint64 _startAssess,
@@ -107,12 +109,12 @@ contract VoteraVote is Ownable, IVoteraVote {
             "E001"
         );
         require(block.timestamp < _startVote && _startVote < _endVote, "E001");
-        if (_voteType == VoteType.FUND) {
+        if (_useAssess) {
             require(block.timestamp < _endAssess && _startAssess < _endAssess && _endAssess < _startVote, "E001");
         }
 
         voteInfos[_proposalID].state = VoteState.CREATED;
-        voteInfos[_proposalID].voteType = _voteType;
+        voteInfos[_proposalID].useAssess = _useAssess;
         voteInfos[_proposalID].commonsBudgetAddress = commonsBudgetAddress;
         voteInfos[_proposalID].startVote = _startVote;
         voteInfos[_proposalID].endVote = _endVote;
@@ -131,6 +133,9 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @param _endVote vote ending time (seconds since the epoch)
     /// @param _openVote vote opening time (seconds since the epoch)
     /// @param _info additional information url for this vote
+    /// validator can submitBallot between _startVote and _endVote
+    /// _openVote is about one or two block times after _endVote
+    /// vote manager starts revealing ballot after openVote 
     function setupVoteInfo(
         bytes32 _proposalID,
         uint64 _startVote,
@@ -178,9 +183,9 @@ contract VoteraVote is Ownable, IVoteraVote {
         }
 
         if (_finalized) {
-            voteInfos[_proposalID].state = voteInfos[_proposalID].voteType == VoteType.SYSTEM
-                ? VoteState.RUNNING
-                : VoteState.ASSESSING;
+            voteInfos[_proposalID].state = voteInfos[_proposalID].useAssess
+                ? VoteState.ASSESSING
+                : VoteState.RUNNING;
         }
     }
 
@@ -217,10 +222,10 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @param _assess assessment result
     function submitAssess(bytes32 _proposalID, uint64[] calldata _assess) public {
         onlyVoteWithState(_proposalID, VoteState.ASSESSING);
-        require(voteInfos[_proposalID].voteType == VoteType.FUND, "E001");
+        require(voteInfos[_proposalID].useAssess, "E001");
         require(isContainValidator(_proposalID, msg.sender), "E000");
         require(block.timestamp < voteInfos[_proposalID].endAssess, "E003");
-        require(_assess.length == 5, "E001");
+        require(_assess.length == ASSESS_ITEM_SIZE, "E001");
         for (uint256 i = 0; i < _assess.length; i++) {
             require(_assess[i] >= 1 && _assess[i] <= 10, "E001");
         }
@@ -252,14 +257,14 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @param _proposalID id of proposal
     function countAssess(bytes32 _proposalID) public onlyOwner {
         onlyVoteWithState(_proposalID, VoteState.ASSESSING);
-        require(voteInfos[_proposalID].voteType == VoteType.FUND, "E001");
+        require(voteInfos[_proposalID].useAssess, "E001");
         require(block.timestamp >= voteInfos[_proposalID].endAssess, "E004");
 
-        uint64[] memory assessResult = new uint64[](5);
+        uint64[] memory assessResult = new uint64[](ASSESS_ITEM_SIZE);
         uint256 participantSize = ballots[_proposalID].assessKeys.length;
         for (uint256 i = 0; i < participantSize; i++) {
             address participantAddress = ballots[_proposalID].assessKeys[i];
-            for (uint256 j = 0; j < ballots[_proposalID].assessValues[participantAddress].length; j++) {
+            for (uint256 j = 0; j < ASSESS_ITEM_SIZE; j++) {
                 assessResult[j] += ballots[_proposalID].assessValues[participantAddress][j];
             }
         }
