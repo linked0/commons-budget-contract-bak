@@ -86,7 +86,16 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         CREATED, // Created
         REJECTED, // proposal rejected by assessment before vote
         ACCEPTED, // proposal accepted by assessment before vote
-        FINISHED // The Vote contract has already notified this contract that the vote has ended
+        FINISHED // Vote Finished
+    }
+
+    // The result of the proposal
+    enum ProposalResult {
+        NONE, // Not yet decided
+        APPROVED, // Approved with sufficient positive votes
+        REJECTED, // Rejected with insufficient positive votes
+        INVALID_QUORUM, // Invalid due to the lack of the number sufficient for a quorum
+        ASSESSMENT_FAILED // Not passed for the assessment
     }
 
     struct ProposalFeeData {
@@ -98,8 +107,10 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     struct ProposalData {
         ProposalStates state;
         ProposalType proposalType;
+        ProposalResult proposalResult;
         address proposer;
         string title;
+        uint256 countingFinishTime;
         uint64 start;
         uint64 end;
         uint64 startAssess;
@@ -361,9 +372,11 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
             require(voteResult[i] == _voteResult[i], "InvalidInput");
         }
 
+        proposalMaps[_proposalID].countingFinishTime = block.timestamp;
         proposalMaps[_proposalID].state = ProposalStates.FINISHED;
         proposalMaps[_proposalID].validatorSize = _validatorSize;
         proposalMaps[_proposalID].voteResult = _voteResult;
+        proposalMaps[_proposalID].proposalResult = ProposalResult.APPROVED;
     }
 
     /// @notice check if the distribution is available
