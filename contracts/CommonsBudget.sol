@@ -36,6 +36,10 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     // vote fess to in an attempt of distribution.
     uint256 public vote_fee_distrib_count;
 
+    // The difference for approval between the net percent of positive votes
+    // and the net percentage of negative votes
+    uint256 public constant approval_diff_percent = 10;
+
     constructor() {
         fund_proposal_fee_permil = 10;
         system_proposal_fee = 100000000000000000000;
@@ -368,15 +372,28 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
         uint64[] memory voteResult = voteraVote.getVoteResult(_proposalID);
         require(voteResult.length == _voteResult.length, "InvalidInput");
+        uint256 voteCount = 0;
         for (uint256 i = 0; i < voteResult.length; i++) {
             require(voteResult[i] == _voteResult[i], "InvalidInput");
+            voteCount += voteResult[i];
         }
 
         proposalMaps[_proposalID].countingFinishTime = block.timestamp;
         proposalMaps[_proposalID].state = ProposalStates.FINISHED;
         proposalMaps[_proposalID].validatorSize = _validatorSize;
         proposalMaps[_proposalID].voteResult = _voteResult;
-        proposalMaps[_proposalID].proposalResult = ProposalResult.APPROVED;
+
+        // Check if it has sufficient number of quorum member
+        if (voteCount < (_validatorSize * vote_quorum_factor) / 1000000) {
+            proposalMaps[_proposalID].proposalResult = ProposalResult.INVALID_QUORUM;
+        }
+        // Check if it has sufficient number of positive votes
+        else if (voteResult[1] <= voteResult[2] ||
+            ((voteResult[1] - voteResult[2]) * 100) / voteCount < approval_diff_percent) {
+            proposalMaps[_proposalID].proposalResult = ProposalResult.REJECTED;
+        } else {
+            proposalMaps[_proposalID].proposalResult = ProposalResult.APPROVED;
+        }
     }
 
     /// @notice check if the distribution is available

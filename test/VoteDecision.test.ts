@@ -269,4 +269,97 @@ describe("Test of Vote Decision", () => {
         expect(proposalData.proposalResult).equal(1); // APPROVED
         expect(Number(proposalData.countingFinishTime)).greaterThan(blockLatest.timestamp);
     });
+
+    // Total validator: 100
+    // Positive: 20
+    // Negative: 10
+    // Abstention(기권): 3
+    // Voting is approved with a quorum of one-third of validators.
+    it("finishVote: System proposal approved with a proper quorum", async () => {
+        await createSystemProposal();
+        await processVote(20, 10, 3);
+
+        const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
+        const proposalData = await voteBudget.getProposalData(proposalID);
+        expect(proposalData.state).equal(4); // ProposalStates.FINISHED
+        expect(proposalData.proposalResult).equal(1); // ProposalResult.APPROVED
+    });
+
+    // Total validator: 100
+    // Positive: 20
+    // Negative: 10
+    // Abstention(기권): 2
+    // Voting is rejected because the voting count(=32) is less than the quorum(=33).
+    it("finishVote: Rejected due to lack of quorum", async () => {
+        await createFundProposal();
+        await processVote(20, 10, 2);
+
+        const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
+        const proposalData = await voteBudget.getProposalData(proposalID);
+        expect(proposalData.state).equal(4); // ProposalStates.FINISHED
+        expect(proposalData.proposalResult).equal(3); // ProposalResult.INVALID_QUORUM
+    });
+
+    // Total validator: 100
+    // Positive: 18
+    // Negative: 15
+    // Abstention(기권): 0
+    // Voting is rejected because the ratio of difference between approval and rejection
+    // to the quorum is less than 0.01.
+    it("finishVote: Rejected due to insufficient approval votes", async () => {
+        await createFundProposal();
+        await processVote(18, 15, 0);
+
+        const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
+        const proposalData = await voteBudget.getProposalData(proposalID);
+        expect(proposalData.state).equal(4); // ProposalStates.FINISHED
+        expect(proposalData.proposalResult).equal(2); // ProposalResult.REJECTED
+    });
+
+    // Total validator: 100
+    // Positive: 33
+    // Negative: 33
+    // Abstention(기권): 14
+    // Voting is rejected because the number of positive votes is the same as
+    // the number of negative ones
+    it("finishVote: Rejected with too many negative votes", async () => {
+        await createFundProposal();
+        await processVote(33, 33, 14);
+
+        const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
+        const proposalData = await voteBudget.getProposalData(proposalID);
+        expect(proposalData.state).equal(4); // ProposalStates.FINISHED
+        expect(proposalData.proposalResult).equal(2); // ProposalResult.REJECTED
+    });
+
+    // Total validator: 100
+    // Positive: 33
+    // Negative: 34
+    // Abstention(기권): 13
+    // Voting is rejected because negative votes are more than positive ones
+    it("finishVote: Rejected with too many negative votes", async () => {
+        await createFundProposal();
+        await processVote( 33, 34,13);
+
+        const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
+        const proposalData = await voteBudget.getProposalData(proposalID);
+        expect(proposalData.state).equal(4); // ProposalStates.FINISHED
+        expect(proposalData.proposalResult).equal(2); // ProposalResult.REJECTED
+    });
+
+    // Total validator: 100
+    // Positive: 42
+    // Negative: 34
+    // Abstention(기권): 4
+    // Voting is approved because the ratio of the difference between positive votes
+    // and negative votes to the quorum is more than 0.01.
+    it("finishVote: Approved with approval votes with more than 10 percent", async () => {
+        await createFundProposal();
+        await processVote( 42, 34, 4);
+
+        const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
+        const proposalData = await voteBudget.getProposalData(proposalID);
+        expect(proposalData.state).equal(4); // ProposalStates.FINISHED
+        expect(proposalData.proposalResult).equal(1); // ProposalResult.APPROVED
+    });
 });
