@@ -850,7 +850,7 @@ describe("Test of Commons Budget Contract", () => {
         const proposalData = await contract.getProposalData(proposal);
         expect(proposalData.state, "ACCEPTED state").equal(3); // ACCEPTED
         expect(proposalData.assessParticipantSize).equal(BigNumber.from(assessCount));
-        expect(proposalData.assessResult).eql(passAssessResult.map((v) => BigNumber.from(v * assessCount)));
+        expect(proposalData.assessData).eql(passAssessResult.map((v) => BigNumber.from(v * assessCount)));
     });
 
     it("assessProposal: rejected by score - total averge 7", async () => {
@@ -890,7 +890,7 @@ describe("Test of Commons Budget Contract", () => {
         const proposalData = await contract.getProposalData(proposal);
         expect(proposalData.state, "REJECTED state").equal(2); // REJECTED
         expect(proposalData.assessParticipantSize).equal(BigNumber.from(assessCount));
-        expect(proposalData.assessResult).eql(rejectedAssessResult.map((v) => BigNumber.from(v * assessCount)));
+        expect(proposalData.assessData).eql(rejectedAssessResult.map((v) => BigNumber.from(v * assessCount)));
     });
 
     it("assessProposal: rejected by score - average 5 for each", async () => {
@@ -996,7 +996,7 @@ describe("Test of Commons Budget Contract", () => {
         const proposalData = await contract.getProposalData(proposal);
         expect(proposalData.state, "REJECTED state").equal(2); // REJECTED
         expect(proposalData.assessParticipantSize).equal(0);
-        expect(proposalData.assessResult).eql(Array(5).fill(BigNumber.from(0)));
+        expect(proposalData.assessData).eql(Array(5).fill(BigNumber.from(0)));
     });
 
     it("assessProposal: NotFoundProposal", async () => {

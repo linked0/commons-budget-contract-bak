@@ -38,12 +38,12 @@ interface ICommonsBudget {
     /// @param proposalID id of proposal
     /// @param validatorSize size of valid validator of proposal
     /// @param assessParticipantSize size of assess participant
-    /// @param assessResult result of assess
+    /// @param assessData result of assess
     function assessProposal(
         bytes32 proposalID,
         uint256 validatorSize,
         uint256 assessParticipantSize,
-        uint64[] calldata assessResult
+        uint64[] calldata assessData
     ) external;
 
     /// @notice notify that vote is finished

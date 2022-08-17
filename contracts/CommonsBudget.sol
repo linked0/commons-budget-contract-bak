@@ -128,7 +128,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         bytes32 docHash;
         uint256 fundAmount;
         uint256 assessParticipantSize;
-        uint64[] assessResult;
+        uint64[] assessData;
         uint256 validatorSize;
         uint64[] voteResult;
         address voteAddress;
@@ -314,12 +314,12 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @param _proposalID id of proposal
     /// @param _validatorSize size of valid validator of proposal
     /// @param _assessParticipantSize size of assess participant
-    /// @param _assessResult result of assess
+    /// @param _assessData result of assess
     function assessProposal(
         bytes32 _proposalID,
         uint256 _validatorSize,
         uint256 _assessParticipantSize,
-        uint64[] calldata _assessResult
+        uint64[] calldata _assessData
     )
         external
         override
@@ -329,20 +329,20 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     {
         proposalMaps[_proposalID].validatorSize = _validatorSize;
         proposalMaps[_proposalID].assessParticipantSize = _assessParticipantSize;
-        proposalMaps[_proposalID].assessResult = _assessResult;
+        proposalMaps[_proposalID].assessData = _assessData;
 
         if (_assessParticipantSize > 0) {
             uint256 minPass = 5 * _assessParticipantSize; // average 5 each
             uint256 sum = 0;
-            for (uint256 j = 0; j < _assessResult.length; j++) {
-                if (_assessResult[j] < minPass) {
+            for (uint256 j = 0; j < _assessData.length; j++) {
+                if (_assessData[j] < minPass) {
                     proposalMaps[_proposalID].state = ProposalStates.REJECTED;
                     return;
                 }
-                sum += _assessResult[j];
+                sum += _assessData[j];
             }
             // check total average 7 above
-            minPass = _assessResult.length * 7 * _assessParticipantSize;
+            minPass = _assessData.length * 7 * _assessParticipantSize;
             if (sum < minPass) {
                 proposalMaps[_proposalID].state = ProposalStates.REJECTED;
                 return;

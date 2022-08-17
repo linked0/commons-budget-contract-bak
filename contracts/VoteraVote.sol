@@ -26,6 +26,14 @@ contract VoteraVote is Ownable, IVoteraVote {
 
     uint public constant ASSESS_ITEM_SIZE = 5;
 
+    /// @notice save vote information
+    /// validator can submit ballot between startVote and endAvote
+    /// if useAssess is true, pre-eveluation begeins at startAssess
+    /// and validator can submit assessment result until endAssess.
+    /// voteStart is after more than 3 days after endAssess
+    /// openVote is about one or two block times after endVote
+    /// vote manager starts revealing ballot after openVote
+    /// info is additional information url for proposal
     struct VoteInfo {
         VoteState state;
         bool useAssess;
@@ -37,7 +45,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         uint64 openVote;
         string info;
         uint64[] voteResult;
-        uint64[] assessResult;
+        uint64[] assessData;
     }
 
     struct ValidatorMap {
@@ -133,9 +141,6 @@ contract VoteraVote is Ownable, IVoteraVote {
     /// @param _endVote vote ending time (seconds since the epoch)
     /// @param _openVote vote opening time (seconds since the epoch)
     /// @param _info additional information url for this vote
-    /// validator can submitBallot between _startVote and _endVote
-    /// _openVote is about one or two block times after _endVote
-    /// vote manager starts revealing ballot after openVote 
     function setupVoteInfo(
         bytes32 _proposalID,
         uint64 _startVote,
@@ -260,23 +265,23 @@ contract VoteraVote is Ownable, IVoteraVote {
         require(voteInfos[_proposalID].useAssess, "E001");
         require(block.timestamp >= voteInfos[_proposalID].endAssess, "E004");
 
-        uint64[] memory assessResult = new uint64[](ASSESS_ITEM_SIZE);
+        uint64[] memory assessData = new uint64[](ASSESS_ITEM_SIZE);
         uint256 participantSize = ballots[_proposalID].assessKeys.length;
         for (uint256 i = 0; i < participantSize; i++) {
             address participantAddress = ballots[_proposalID].assessKeys[i];
             for (uint256 j = 0; j < ASSESS_ITEM_SIZE; j++) {
-                assessResult[j] += ballots[_proposalID].assessValues[participantAddress][j];
+                assessData[j] += ballots[_proposalID].assessValues[participantAddress][j];
             }
         }
 
         voteInfos[_proposalID].state = VoteState.RUNNING;
-        voteInfos[_proposalID].assessResult = assessResult;
+        voteInfos[_proposalID].assessData = assessData;
 
         ICommonsBudget(voteInfos[_proposalID].commonsBudgetAddress).assessProposal(
             _proposalID,
             validators[_proposalID].keys.length,
             participantSize,
-            assessResult
+            assessData
         );
     }
 
@@ -289,7 +294,7 @@ contract VoteraVote is Ownable, IVoteraVote {
             voteInfos[_proposalID].state == VoteState.RUNNING || voteInfos[_proposalID].state == VoteState.FINISHED,
             "E002"
         );
-        return voteInfos[_proposalID].assessResult;
+        return voteInfos[_proposalID].assessData;
     }
 
     function verifyBallot(
