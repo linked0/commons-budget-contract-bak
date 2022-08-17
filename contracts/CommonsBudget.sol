@@ -64,6 +64,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     // Proposal Fee = Number of validators * _value / 1000000
     function setVoteQuorumFactor(uint32 _value) public onlyOwner {
+        require(_value > 0 && _value < 1000000, "InvalidInput");
         vote_quorum_factor = _value;
     }
 

@@ -154,6 +154,11 @@ describe("Test of Commons Budget Contract", () => {
         assert.deepStrictEqual(factor, 200000);
     });
 
+    it("Set Invalid Quorum Factor", async () => {
+        await expect(contract.connect(adminSigner).setVoteQuorumFactor(3333333)).to.be.revertedWith("InvalidInput");
+        await expect(contract.connect(adminSigner).setVoteQuorumFactor(0)).to.be.revertedWith("InvalidInput");
+    });
+
     it("Check Voter Fee", async () => {
         const voterFee = await contract.getVoterFee();
         assert.deepStrictEqual(voterFee.toNumber(), 400000000000000);
