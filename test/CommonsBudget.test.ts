@@ -156,7 +156,7 @@ describe("Test of Commons Budget Contract", () => {
 
     it("Check Voter Fee", async () => {
         const voterFee = await contract.getVoterFee();
-        assert.deepStrictEqual(voterFee.toNumber(), 200000000000000);
+        assert.deepStrictEqual(voterFee.toNumber(), 400000000000000);
     });
 
     it("Set Voter Fee", async () => {

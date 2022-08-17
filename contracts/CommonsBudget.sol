@@ -40,7 +40,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         fund_proposal_fee_permil = 10;
         system_proposal_fee = 100000000000000000000;
         vote_quorum_factor = 333333; // Number of validators / 3
-        voter_fee = 200000000000000;
+        voter_fee = 400000000000000;
         vote_fee_distrib_count = 100;
     }
 
