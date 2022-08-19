@@ -24,7 +24,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         FINISHED
     }
 
-    uint public constant ASSESS_ITEM_SIZE = 5;
+    uint256 public constant ASSESS_ITEM_SIZE = 5;
 
     /// @notice save vote information
     /// validator can submit ballot between startVote and endAvote
@@ -188,9 +188,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         }
 
         if (_finalized) {
-            voteInfos[_proposalID].state = voteInfos[_proposalID].useAssess
-                ? VoteState.ASSESSING
-                : VoteState.RUNNING;
+            voteInfos[_proposalID].state = voteInfos[_proposalID].useAssess ? VoteState.ASSESSING : VoteState.RUNNING;
         }
     }
 
@@ -250,7 +248,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         return ballots[_proposalID].assessKeys.length;
     }
 
-    /// @notice get assessment address 
+    /// @notice get assessment address
     /// @param _proposalID id of proposal
     /// @param _index index
     /// @return returns the address of assessment of that index
