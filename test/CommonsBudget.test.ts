@@ -121,54 +121,62 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     it("Check Proposal Fee", async () => {
-        const fundProposalFee = await contract.getFundProposalFeePermil();
+        const fundProposalFee = await contract.fund_proposal_fee_permil();
         assert.deepStrictEqual(fundProposalFee.toString(), "10");
-        const systemProposalFe = await contract.getSystemProposalFee();
+        const systemProposalFe = await contract.system_proposal_fee();
         assert.deepStrictEqual(systemProposalFe.toString(), "100000000000000000000");
     });
 
-    it("Set Proposal Fee", async () => {
-        const originalFeePermil = await contract.getFundProposalFeePermil();
-        const originalProposalFee = await contract.getSystemProposalFee();
-
-        await contract.connect(adminSigner).setFundProposalFeePermil(20);
-        await contract.connect(adminSigner).setSystemProposalFee(BigNumber.from(500).mul(BigNumber.from(10).pow(18)));
-
-        const fundProposalFee = await contract.getFundProposalFeePermil();
-        assert.deepStrictEqual(fundProposalFee.toString(), "20");
-        const systemProposalFe = await contract.getSystemProposalFee();
-        assert.deepStrictEqual(systemProposalFe.toString(), "500000000000000000000");
-
-        await contract.connect(adminSigner).setFundProposalFeePermil(originalFeePermil);
-        await contract.connect(adminSigner).setSystemProposalFee(originalProposalFee);
-    });
-
     it("Check Quorum Factor", async () => {
-        const factor = await contract.getVoteQuorumFactor();
+        const factor = await contract.vote_quorum_factor();
         assert.deepStrictEqual(factor, 333333);
     });
 
-    it("Set Quorum Factor", async () => {
-        await contract.connect(adminSigner).setVoteQuorumFactor(200000);
-        const factor = await contract.getVoteQuorumFactor();
-        assert.deepStrictEqual(factor, 200000);
-    });
-
-    it("Set Invalid Quorum Factor", async () => {
-        await expect(contract.connect(adminSigner).setVoteQuorumFactor(3333333)).to.be.revertedWith("InvalidInput");
-        await expect(contract.connect(adminSigner).setVoteQuorumFactor(0)).to.be.revertedWith("InvalidInput");
-    });
-
     it("Check Voter Fee", async () => {
-        const voterFee = await contract.getVoterFee();
+        const voterFee = await contract.voter_fee();
         assert.deepStrictEqual(voterFee.toNumber(), 400000000000000);
     });
 
-    it("Set Voter Fee", async () => {
-        await contract.connect(adminSigner).setVoterFee(300000000000000);
-        const voterFee = await contract.getVoterFee();
-        assert.deepStrictEqual(voterFee.toNumber(), 300000000000000);
-    });
+    // TODO: This tests should be restored after solving the issue about contract size limit
+    // it("Set Congress Network policies", async () => {
+    //     const originalFeePermil = await contract.fund_proposal_fee_permil();
+    //     const originalProposalFee = await contract.system_proposal_fee();
+    //     const originalQuorumFactor = await contract.vote_quorum_factor();
+    //     const originalVoterFee = await contract.voter_fee();
+    //
+    //     await contract.connect(adminSigner).setCongressPolicies(
+    //         20,
+    //         BigNumber.from(500).mul(BigNumber.from(10).pow(18)),
+    //         200000,
+    //         300000000000000);
+    //     assert.deepStrictEqual((await contract.fund_proposal_fee_permil()).toString(), "20");
+    //     assert.deepStrictEqual((await contract.system_proposal_fee()).toString(), "500000000000000000000");
+    //     assert.deepStrictEqual((await contract.vote_quorum_factor()), 200000);
+    //     assert.deepStrictEqual((await contract.voter_fee()).toNumber(), 300000000000000);
+    //
+    //     await contract.connect(adminSigner).setCongressPolicies(
+    //         originalFeePermil,
+    //         originalProposalFee,
+    //         originalQuorumFactor,
+    //         originalVoterFee);
+    // });
+    //
+    // it("Set Invalid Quorum Factor", async () => {
+    //     const originalFeePermil = await contract.fund_proposal_fee_permil();
+    //     const originalProposalFee = await contract.system_proposal_fee();
+    //     const originalVoterFee = await contract.voter_fee();
+    //
+    //     await expect(contract.connect(adminSigner).setCongressPolicies(
+    //         originalFeePermil,
+    //         originalProposalFee,
+    //         3333333,
+    //         originalVoterFee)).to.be.revertedWith("InvalidInput");
+    //     await expect(contract.connect(adminSigner).setCongressPolicies(
+    //         originalFeePermil,
+    //         originalProposalFee,
+    //         0,
+    //         originalVoterFee)).to.be.revertedWith("InvalidInput");
+    // });
 
     it("changeVoteParam", async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
@@ -458,7 +466,7 @@ describe("Test of Commons Budget Contract", () => {
         const endTime = startTime + 30000;
         const docHash = DocHash;
         const proposer = validators[0].address;
-        const feePermil = await contract.getFundProposalFeePermil();
+        const feePermil = await contract.fund_proposal_fee_permil();
         const wantedFee = fundAmount.mul(feePermil).div(1000);
         const wrongFee = wantedFee.div(2);
         const signProposal = await signFundProposal(

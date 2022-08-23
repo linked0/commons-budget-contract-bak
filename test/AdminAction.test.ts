@@ -158,7 +158,7 @@ describe("Test actions by contract owner", () => {
 
         // compares voters' balances with previous balances
         // the specified fee should be added to all the voters' balances
-        const voterFee = await contract.getVoterFee();
+        const voterFee = await contract.voter_fee();
         await network.provider.send("evm_mine");
         for (const address of valAddresses) {
             const curBalance = await provider.getBalance(address);

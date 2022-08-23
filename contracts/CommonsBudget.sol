@@ -19,18 +19,18 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     // It is a fee for the funding proposal. This is not a unit of BOA.
     // This is a thousand percent.
     // Proposal Fee = Funding amount * fund_proposal_fee_permil / 1000
-    uint32 private fund_proposal_fee_permil;
+    uint32 public fund_proposal_fee_permil;
 
     // It is a fee for system proposals. Its unit is cent of BOA.
-    uint256 private system_proposal_fee;
+    uint256 public system_proposal_fee;
 
     // Factor required to calculate a valid quorum
     // Quorum = Number of validators * vote_quorum_permil / 1000000
-    uint32 private vote_quorum_factor;
+    uint32 public vote_quorum_factor;
 
     // It is a fee to be paid for the validator that participates
     // in a voting, which is a voter. Its unit is cent of BOA.
-    uint256 private voter_fee;
+    uint256 public voter_fee;
 
     // The max count of validators that CommonsBudget can distribute
     // vote fess to in an attempt of distribution.
@@ -44,41 +44,19 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         vote_fee_distrib_count = 100;
     }
 
-    // Proposal Fee = Funding amount * _value / 1000
-    function setFundProposalFeePermil(uint32 _value) public onlyOwner {
-        fund_proposal_fee_permil = _value;
-    }
-
-    function getFundProposalFeePermil() public view returns (uint32) {
-        return fund_proposal_fee_permil;
-    }
-
-    // Its unit is cent of BOA.
-    function setSystemProposalFee(uint256 _value) public onlyOwner {
-        system_proposal_fee = _value;
-    }
-
-    function getSystemProposalFee() public view returns (uint256) {
-        return system_proposal_fee;
-    }
-
-    // Proposal Fee = Number of validators * _value / 1000000
-    function setVoteQuorumFactor(uint32 _value) public onlyOwner {
-        require(_value > 0 && _value < 1000000, "InvalidInput");
-        vote_quorum_factor = _value;
-    }
-
-    function getVoteQuorumFactor() public view returns (uint32) {
-        return vote_quorum_factor;
-    }
-
-    function setVoterFee(uint256 _value) public onlyOwner {
-        voter_fee = _value;
-    }
-
-    function getVoterFee() public view returns (uint256) {
-        return voter_fee;
-    }
+    // TODO: This function should be restored after solving the issue about contract size limit
+    //    function setCongressPolicies(
+    //        uint32 _fund_proposal_fee_permil,
+    //        uint256 _system_proposal_fee,
+    //        uint32 _vote_quorum_factor,
+    //        uint256 _voter_fee
+    //    ) public onlyOwner {
+    //        require(_vote_quorum_factor > 0 && _vote_quorum_factor < 1000000, "InvalidInput");
+    //        fund_proposal_fee_permil = _fund_proposal_fee_permil;
+    //        system_proposal_fee = _system_proposal_fee;
+    //        vote_quorum_factor = _vote_quorum_factor;
+    //        voter_fee = _voter_fee;
+    //    }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return
