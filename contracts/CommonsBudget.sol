@@ -9,6 +9,18 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./IVoteraVote.sol";
 import "./ICommonsBudget.sol";
 
+// The code about whether the fund can be withdrawn
+// "W00" : The fund can be withdrawn
+// "W01" : There's no proposal for the proposal ID
+// "W02" : The proposal is not a fund proposal
+// "W03" : The assessment failed
+// "W04" : The vote counting is not yet complete
+// "W05" : The requester of the funding is not the proposer
+// "W06" : The proposal has come to invalid or been rejected
+// "W07" : 24 hours has not passed after the voting finished
+// "W08" : The withdrawal of the funds was refused
+// "W09" : The funds is already withdrawn
+
 contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     event Received(address, uint256);
 
@@ -70,7 +82,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
                 this.createFundProposal.selector ^
                 this.assessProposal.selector ^
                 this.finishVote.selector ^
-                this.distributeVoteFees.selector;
+                this.distributeVoteFees.selector ^
+                this.withdraw.selector;
     }
 
     /// @notice vote manager is votera vote server
@@ -115,6 +128,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         address proposer;
         string title;
         uint256 countingFinishTime;
+        bool fundWithdrawn;
         uint64 start;
         uint64 end;
         uint64 startAssess;
@@ -440,5 +454,40 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @return returns proposal data
     function getProposalData(bytes32 _proposalID) public view returns (ProposalData memory) {
         return proposalMaps[_proposalID];
+    }
+
+    /// @notice withdraw the funds of the proposal
+    /// @param _proposalID id of proposal
+    function withdraw(bytes32 _proposalID) external override {
+        string memory stateCode;
+        // TODO: This part should be restored after solving the issue about contract size limit
+        //        if (proposalMaps[_proposalID].state == ProposalStates.INVALID) {
+        //            stateCode = "W01";
+        //        }
+        if (proposalMaps[_proposalID].proposalType == ProposalType.SYSTEM) {
+            stateCode = "W02";
+        }
+        // TODO: This part should be restored after solving the issue about contract size limit
+        //        else if (proposalMaps[_proposalID].state == ProposalStates.REJECTED) {
+        //            stateCode = "W03";
+        //        }
+        //        else if (proposalMaps[_proposalID].state < ProposalStates.FINISHED) {
+        //            stateCode = "W04";
+        //        }
+        else if (msg.sender != proposalMaps[_proposalID].proposer) {
+            stateCode = "W05";
+        } else if (proposalMaps[_proposalID].proposalResult != ProposalResult.APPROVED) {
+            stateCode = "W06";
+        } else if (block.timestamp - proposalMaps[_proposalID].countingFinishTime < 86400) {
+            stateCode = "W07";
+        } else if (proposalMaps[_proposalID].fundWithdrawn == true) {
+            stateCode = "W09";
+        } else {
+            stateCode = "W00";
+        }
+
+        require(keccak256(bytes(stateCode)) == keccak256(bytes("W00")), stateCode);
+        proposalMaps[_proposalID].fundWithdrawn = true;
+        payable(msg.sender).transfer(proposalMaps[_proposalID].fundAmount);
     }
 }
