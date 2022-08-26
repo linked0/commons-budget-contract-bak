@@ -13,13 +13,29 @@ import {
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
-import { makeCommitment, signCommitment, signFundProposal, signSystemProposal } from "./VoteHelper";
+import {
+    createSystemProposal,
+    makeCommitment,
+    setEnvironment,
+    signCommitment,
+    signFundProposal,
+    signSystemProposal
+} from "./VoteHelper";
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
-const AddressNormal = "0xcD958D25697A04B0e55BF13c5ADE051beE046354";
+const InvalidProposal = "0x43d26d775ef3a282483394ce041a2757fbf700c9cf86accc6f0ce410accf123f";
 const DocHash = "0x9f18669085971c1306dd0096ec531e71ad2732fd0e783068f2a3aba628613231";
 
 chai.use(solidity);
+
+function getNewProposal() {
+    for (;;) {
+        const proposal = `0x${crypto.randomBytes(32).toString("hex")}`;
+        if (proposal !== InvalidProposal) {
+            return proposal;
+        }
+    }
+}
 
 describe("Test actions by contract owner", () => {
     let contract: CommonsBudget;
@@ -34,7 +50,9 @@ describe("Test actions by contract owner", () => {
     const amount = BigNumber.from(10).pow(18);
     const adminSigner = provider.getSigner(admin.address);
 
-    let proposal: string;
+    let proposalID: string;
+
+    const proposer: Wallet = validators[0];
 
     before(async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
@@ -53,68 +71,51 @@ describe("Test actions by contract owner", () => {
         const voteAddress = voteraVote.address;
         const changeParamTx = await contract.changeVoteParam(voteManager.address, voteAddress);
         await changeParamTx.wait();
+
+        // set information about network, contract, and validators in helper module
+        await setEnvironment(provider, contract, voteraVote, admin, voteManager, validators);
     });
 
     beforeEach(() => {
-        proposal = `0x${crypto.randomBytes(32).toString("hex")}`;
+        // generate random proposal id (which is address type)
+        proposalID = getNewProposal();
     });
 
     it("Check if admin can distribute vote fees", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "SystemProposalTitle";
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const openTime = endTime + 30;
-        const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createSystemProposal(
-            proposal,
-            { start: startTime, end: endTime, startAssess: 0, endAssess: 0, docHash, amount: 0, title },
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
+        await createSystemProposal(proposalID, proposer, DocHash, basicFee);
+        const proposalData = await contract.getProposalData(proposalID);
+        const startTime = proposalData.start;
+        const endTime = proposalData.end;
+        const openTime = endTime.add(30);
 
         // ready to start voting
-        const { voteAddress } = await contract.getProposalData(proposal);
-        await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
+        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, openTime, "info");
 
         // add only half of validators
         const validators1 = validators.slice(0, validators.length / 2);
         const validators2 = validators.slice(validators1.length, validators.length);
         await voteraVote.addValidators(
-            proposal,
+            proposalID,
             validators1.map((v) => v.address),
             false
         );
-        expect(await contract.connect(adminSigner).canDistributeVoteFees(proposal)).equal(false);
+        expect(await contract.connect(adminSigner).canDistributeVoteFees(proposalID)).equal(false);
 
         // add all the validators
         await voteraVote.addValidators(
-            proposal,
+            proposalID,
             validators2.map((v) => v.address),
             true
         );
-        expect(await contract.connect(adminSigner).canDistributeVoteFees(proposal)).equal(true);
+        expect(await contract.connect(adminSigner).canDistributeVoteFees(proposalID)).equal(true);
     });
 
     it("Distribute fees to more than 500 validators", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "SystemProposalTitle";
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const openTime = endTime + 30;
-        const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createSystemProposal(
-            proposal,
-            { start: startTime, end: endTime, startAssess: 0, endAssess: 0, docHash, amount: 0, title },
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
+        await createSystemProposal(proposalID, proposer, DocHash, basicFee);
+        const proposalData = await contract.getProposalData(proposalID);
+        const startTime = proposalData.start;
+        const endTime = proposalData.end;
+        const openTime = endTime.add(30);
 
         // create more validators and have 108 validators in total
         let manyValidators: Wallet[] = validators;
@@ -124,19 +125,19 @@ describe("Test actions by contract owner", () => {
         }
 
         // ready to start voting
-        const { voteAddress } = await contract.getProposalData(proposal);
-        await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
+        const { voteAddress } = await contract.getProposalData(proposalID);
+        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, openTime, "info");
         const count = Math.floor(manyValidators.length / 100);
         for (let i = 0; i < count; i += 1) {
             const start = i * 100;
             await voteraVote.addValidators(
-                proposal,
+                proposalID,
                 manyValidators.slice(start, start + 100).map((v) => v.address),
                 false
             );
         }
         await voteraVote.addValidators(
-            proposal,
+            proposalID,
             manyValidators.slice(addCount, manyValidators.length).map((v) => v.address),
             true
         );
@@ -144,10 +145,10 @@ describe("Test actions by contract owner", () => {
         // get validators' balances to be compared with their balances after paying fees
         const prevBalances = new Map<string, BigNumber>();
         const valAddresses: string[] = [];
-        const validatorCount = await voteraVote.getValidatorCount(proposal);
+        const validatorCount = await voteraVote.getValidatorCount(proposalID);
         const valAddressLength = validatorCount.toNumber();
         for (let i = 0; i < valAddressLength; i += 1) {
-            valAddresses.push(await voteraVote.getValidatorAt(proposal, i));
+            valAddresses.push(await voteraVote.getValidatorAt(proposalID, i));
         }
         expect(valAddresses.length).equals(manyValidators.length);
         for (const address of valAddresses) {
@@ -160,7 +161,7 @@ describe("Test actions by contract owner", () => {
         const distCallCount = valAddresses.length / maxCountDist;
         for (let i = 0; i < distCallCount; i += 1) {
             const start = i * maxCountDist;
-            await contract.distributeVoteFees(proposal, start);
+            await contract.distributeVoteFees(proposalID, start);
             await network.provider.send("evm_mine");
         }
 
@@ -177,7 +178,7 @@ describe("Test actions by contract owner", () => {
         // try to distribute vote fess to validators AGAIN
         for (let i = 0; i < distCallCount; i += 1) {
             const start = i * maxCountDist;
-            await contract.distributeVoteFees(proposal, start);
+            await contract.distributeVoteFees(proposalID, start);
             await network.provider.send("evm_mine");
         }
 
