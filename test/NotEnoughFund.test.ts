@@ -11,7 +11,15 @@ import {
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
-import { displayBalance, makeCommitment, signCommitment, signFundProposal } from "./VoteHelper";
+import {
+    assessProposal,
+    countVoteResult,
+    createFundProposal,
+    createSystemProposal,
+    makeCommitment,
+    processVote,
+    setEnvironment,
+} from "./VoteHelper";
 
 import * as assert from "assert";
 
@@ -58,6 +66,7 @@ describe("Test of Fund Withdrawal with not enough fund", () => {
     const fundAmount = ethers.utils.parseEther("10000.0");
 
     let proposalID: string;
+    const proposer: Wallet = validators[0];
 
     before(async () => {
         // deploy CommonsBudget
@@ -78,6 +87,9 @@ describe("Test of Fund Withdrawal with not enough fund", () => {
         const changeParamTx = await commonsBudget.changeVoteParam(voteManager.address, voteraVote.address);
         await changeParamTx.wait();
 
+        // set information about network, contract, and validators in helper module
+        await setEnvironment(provider, commonsBudget, voteraVote, admin, voteManager, validators);
+
         // send only as much BOA as the fund amount to CommonsBudget contract
         await provider.getSigner(validators[0].address).sendTransaction({
             to: commonsBudget.address,
@@ -90,174 +102,17 @@ describe("Test of Fund Withdrawal with not enough fund", () => {
         proposalID = getNewProposal();
     });
 
-    const createFundProposal = async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposalID,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
-
-        const proposerBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[0]);
-        const makeProposalTx = await proposerBudget.createFundProposal(
-            proposalID,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
-    };
-
-    const assessProposal = async (assessResult: boolean) => {
-        const proposalData = await commonsBudget.getProposalData(proposalID);
-        const startTime = proposalData.start;
-        const endTime = proposalData.end;
-        const openTime = endTime.add(30);
-
-        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, openTime, "info");
-        await voteraVote.addValidators(
-            proposalID,
-            validators.map((v) => v.address),
-            true
-        );
-
-        // distribute vote fess to validators
-        const maxCountDist = (await commonsStorage.vote_fee_distrib_count()).toNumber();
-        // const maxCountDist = (await commonsBudget.connect(adminSigner).vote_fee_distrib_count()).toNumber();
-        const distCallCount = validators.length / maxCountDist;
-        for (let i = 0; i < distCallCount; i += 1) {
-            const start = i * maxCountDist;
-            await commonsBudget.distributeVoteFees(proposalID, start);
-            await network.provider.send("evm_mine");
-        }
-
-        let assessCount: number;
-        let passAssessResult: number[] = [];
-        if (assessResult) {
-            assessCount = 2;
-            passAssessResult = [7, 7, 7, 7, 7];
-        } else {
-            assessCount = 2;
-            passAssessResult = [6, 6, 6, 6, 6];
-        }
-
-        // Fund proposal
-        if (proposalData.proposalType === 1) {
-            for (let i = 0; i < assessCount; i += 1) {
-                const assessVote = VoteraVoteFactory.connect(voteraVote.address, validators[i]);
-                await assessVote.submitAssess(proposalID, passAssessResult);
-            }
-
-            // wait unit assessEnd
-            await network.provider.send("evm_increaseTime", [15000]);
-            await network.provider.send("evm_mine");
-
-            await voteraVote.countAssess(proposalID);
-
-            // wait until startTime
-            await network.provider.send("evm_increaseTime", [15000]);
-            await network.provider.send("evm_mine");
-        } else {
-            // wait until startTime
-            await network.provider.send("evm_increaseTime", [30000]);
-            await network.provider.send("evm_mine");
-        }
-    };
-
-    const countVote = async (positive: number, negative: number, blank: number) => {
-        const voterCount = positive + negative + blank;
-
-        // setup votes
-        const choices: number[] = [];
-        const nonces: number[] = [];
-
-        // set positive votes
-        for (let i = 0; i < positive; i += 1) {
-            choices.push(1);
-            nonces.push(i + 1);
-        }
-
-        // set negative votes
-        for (let i = positive; i < positive + negative; i += 1) {
-            choices.push(2);
-            nonces.push(i + 1);
-        }
-
-        // set blank (= abstention) votes
-        for (let i = positive + negative; i < voterCount; i += 1) {
-            choices.push(0);
-            nonces.push(i + 1);
-        }
-
-        let submitBallotTx;
-        for (let i = 0; i < voterCount; i += 1) {
-            const commitment = await makeCommitment(
-                voteraVote.address,
-                proposalID,
-                validators[i].address,
-                choices[i],
-                nonces[i]
-            );
-            const signature = await signCommitment(voteManager, proposalID, validators[i].address, commitment);
-
-            const ballotVote = VoteraVoteFactory.connect(voteraVote.address, validators[i]);
-            submitBallotTx = await ballotVote.submitBallot(proposalID, commitment, signature);
-        }
-
-        expect(await voteraVote.getBallotCount(proposalID)).equal(voterCount);
-
-        if (submitBallotTx) {
-            await submitBallotTx.wait();
-        }
-
-        await network.provider.send("evm_increaseTime", [30000]);
-        await network.provider.send("evm_mine");
-
-        for (let i = 0; i < voterCount; i += 1) {
-            const ballotAddr = await voteraVote.getBallotAt(proposalID, i);
-            const ballot = await voteraVote.getBallot(proposalID, ballotAddr);
-            expect(ballot.key).equal(validators[i].address);
-        }
-
-        // wait until openTime
-        await network.provider.send("evm_increaseTime", [30]);
-        await network.provider.send("evm_mine");
-
-        await voteraVote.revealBallot(
-            proposalID,
-            validators.slice(0, voterCount).map((v) => v.address),
-            choices,
-            nonces
-        );
-        await voteraVote.countVote(proposalID);
-    };
-
     it("Withdrawal: Unable to withdraw due to W10", async () => {
         const proposerBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[0]);
-        await createFundProposal();
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
 
         // Set too much voter fee for insufficient funds
         const voterFee = ethers.utils.parseEther("100.0");
         await commonsStorage.setVoterFee(voterFee);
-        await assessProposal(true);
+        await assessProposal(proposalID, true);
 
-        // Vote counting finished
-        // Positive: 8, Negative: 0, Blank: 0
-        await countVote(8, 0, 0);
+        // Vote counting finished with approval
+        await countVoteResult(proposalID, true);
 
         // 24 hours passed
         await network.provider.send("evm_increaseTime", [86400]);
