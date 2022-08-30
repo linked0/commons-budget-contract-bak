@@ -386,7 +386,6 @@ contract VoteraVote is Ownable, IVoteraVote {
         require(voteInfos[_proposalID].state == VoteState.RUNNING, "E002");
         require(block.timestamp >= voteInfos[_proposalID].openVote, "E004");
 
-        address voteContract = address(this);
         uint256 len = _validators.length;
         uint256 _revealCount = ballots[_proposalID].revealCount;
         address _validator;
@@ -397,7 +396,7 @@ contract VoteraVote is Ownable, IVoteraVote {
             if (isContainBallot(_proposalID, _validator)) {
                 require(_nonces[i] != 0, "E001");
 
-                dataHash = keccak256(abi.encode(voteContract, _proposalID, _validator, _choices[i], _nonces[i]));
+                dataHash = keccak256(abi.encode(_proposalID, _validator, _choices[i], _nonces[i]));
                 require(dataHash == ballots[_proposalID].values[_validator].commitment, "E001");
 
                 if (ballots[_proposalID].values[_validator].nonce == 0) {
