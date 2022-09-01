@@ -37,7 +37,7 @@ function toFundInput(
     return { start, end, startAssess, endAssess, docHash, amount, title };
 }
 
-describe.only("Test of Commons Budget Contract", () => {
+describe("Test of Commons Budget Contract", () => {
     let contract: CommonsBudget;
     let storageContract: CommonsStorage;
     let voteraVote: VoteraVote;

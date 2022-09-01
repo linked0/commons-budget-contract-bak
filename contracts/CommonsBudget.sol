@@ -73,23 +73,6 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         FUND
     }
 
-    enum ProposalStates {
-        INVALID, // Not exist data
-        CREATED, // Created
-        REJECTED, // proposal rejected by assessment before vote
-        ACCEPTED, // proposal accepted by assessment before vote
-        FINISHED // Vote Finished
-    }
-
-    // The result of the proposal
-    enum ProposalResult {
-        NONE, // Not yet decided
-        APPROVED, // Approved with sufficient positive votes
-        REJECTED, // Rejected with insufficient positive votes
-        INVALID_QUORUM, // Invalid due to the lack of the number sufficient for a quorum
-        ASSESSMENT_FAILED // Not passed for the assessment
-    }
-
     struct ProposalFeeData {
         address payer;
         uint256 value;
@@ -313,28 +296,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         proposalMaps[_proposalID].validatorSize = _validatorSize;
         proposalMaps[_proposalID].assessParticipantSize = _assessParticipantSize;
         proposalMaps[_proposalID].assessData = _assessData;
+        proposalMaps[_proposalID].state = storageContract.assessProposal(_validatorSize, _assessParticipantSize, _assessData);
 
-        if (_assessParticipantSize > 0) {
-            uint256 minPass = 5 * _assessParticipantSize; // average 5 each
-            uint256 sum = 0;
-            for (uint256 j = 0; j < _assessData.length; j++) {
-                if (_assessData[j] < minPass) {
-                    proposalMaps[_proposalID].state = ProposalStates.REJECTED;
-                    return;
-                }
-                sum += _assessData[j];
-            }
-            // check total average 7 above
-            minPass = _assessData.length * 7 * _assessParticipantSize;
-            if (sum < minPass) {
-                proposalMaps[_proposalID].state = ProposalStates.REJECTED;
-                return;
-            }
-
-            proposalMaps[_proposalID].state = ProposalStates.ACCEPTED;
-        } else {
-            proposalMaps[_proposalID].state = ProposalStates.REJECTED;
-        }
     }
 
     /// @notice notify that vote is finished
@@ -355,34 +318,14 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     {
         address _voteAddress = proposalMaps[_proposalID].voteAddress;
         IVoteraVote voteraVote = IVoteraVote(_voteAddress);
-
         require(voteManager == voteraVote.getManager(), "InvalidVote");
         require(_validatorSize == voteraVote.getValidatorCount(_proposalID), "InvalidInput");
-
-        uint64[] memory voteResult = voteraVote.getVoteResult(_proposalID);
-        require(voteResult.length == _voteResult.length, "InvalidInput");
-        uint256 voteCount = 0;
-        for (uint256 i = 0; i < voteResult.length; i++) {
-            require(voteResult[i] == _voteResult[i], "InvalidInput");
-            voteCount += voteResult[i];
-        }
 
         proposalMaps[_proposalID].countingFinishTime = block.timestamp;
         proposalMaps[_proposalID].state = ProposalStates.FINISHED;
         proposalMaps[_proposalID].validatorSize = _validatorSize;
         proposalMaps[_proposalID].voteResult = _voteResult;
-
-        // Check if it has sufficient number of quorum member
-        if (voteCount < (_validatorSize * storageContract.vote_quorum_factor()) / 1000000) {
-            proposalMaps[_proposalID].proposalResult = ProposalResult.INVALID_QUORUM;
-        }
-        // Check if it has sufficient number of positive votes
-        else if (voteResult[1] <= voteResult[2] ||
-            ((voteResult[1] - voteResult[2]) * 100) / voteCount < storageContract.approval_diff_percent()) {
-            proposalMaps[_proposalID].proposalResult = ProposalResult.REJECTED;
-        } else {
-            proposalMaps[_proposalID].proposalResult = ProposalResult.APPROVED;
-        }
+        proposalMaps[_proposalID].proposalResult = storageContract.finishVote(_voteAddress, _proposalID, _validatorSize, _voteResult);
     }
 
     /// @notice check if the distribution is available

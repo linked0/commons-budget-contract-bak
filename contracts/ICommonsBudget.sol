@@ -3,6 +3,23 @@
 pragma solidity ^0.8.0;
 
 interface ICommonsBudget {
+    enum ProposalStates {
+        INVALID, // Not exist data
+        CREATED, // Created
+        REJECTED, // proposal rejected by assessment before vote
+        ACCEPTED, // proposal accepted by assessment before vote
+        FINISHED // Vote Finished
+    }
+
+    // The result of the proposal
+    enum ProposalResult {
+        NONE, // Not yet decided
+        APPROVED, // Approved with sufficient positive votes
+        REJECTED, // Rejected with insufficient positive votes
+        INVALID_QUORUM, // Invalid due to the lack of the number sufficient for a quorum
+        ASSESSMENT_FAILED // Not passed for the assessment
+    }
+
     struct ProposalInput {
         uint64 start; // vote starting time (seconds since the epoch)
         uint64 end; // vote ending time (seconds since the epoch)
