@@ -20,6 +20,38 @@ interface ICommonsBudget {
         ASSESSMENT_FAILED // Not passed for the assessment
     }
 
+    enum ProposalType {
+        SYSTEM,
+        FUND
+    }
+
+    struct ProposalFeeData {
+        address payer;
+        uint256 value;
+        mapping(address => bool) voteFeePaid;
+    }
+
+    struct ProposalData {
+        ProposalStates state;
+        ProposalType proposalType;
+        ProposalResult proposalResult;
+        address proposer;
+        string title;
+        uint256 countingFinishTime;
+        bool fundWithdrawn;
+        uint64 start;
+        uint64 end;
+        uint64 startAssess;
+        uint64 endAssess;
+        bytes32 docHash;
+        uint256 fundAmount;
+        uint256 assessParticipantSize;
+        uint64[] assessData;
+        uint256 validatorSize;
+        uint64[] voteResult;
+        address voteAddress;
+    }
+
     struct ProposalInput {
         uint64 start; // vote starting time (seconds since the epoch)
         uint64 end; // vote ending time (seconds since the epoch)

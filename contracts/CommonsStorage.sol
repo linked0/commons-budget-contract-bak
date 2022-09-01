@@ -149,4 +149,34 @@ contract CommonsStorage is ICommonsStorage {
             return ICommonsBudget.ProposalResult.APPROVED;
         }
     }
+
+    function checkWithdrawState(ICommonsBudget.ProposalData calldata _proposalData) external returns (string memory code)
+    {
+        string memory stateCode;
+        if (_proposalData.state == ICommonsBudget.ProposalStates.INVALID) {
+            stateCode = "W01";
+        }
+        if (_proposalData.proposalType == ICommonsBudget.ProposalType.SYSTEM) {
+            stateCode = "W02";
+        }
+        else if (_proposalData.state == ICommonsBudget.ProposalStates.REJECTED) {
+            stateCode = "W03";
+        }
+        else if (_proposalData.state < ICommonsBudget.ProposalStates.FINISHED) {
+            stateCode = "W04";
+        }
+        else if (_proposalData.proposalType == ICommonsBudget.ProposalType.SYSTEM) {
+            stateCode = "W05";
+        } else if (_proposalData.proposalResult != ICommonsBudget.ProposalResult.APPROVED) {
+            stateCode = "W06";
+        } else if (block.timestamp - _proposalData.countingFinishTime < 86400) {
+            stateCode = "W07";
+        } else if (_proposalData.fundWithdrawn == true) {
+            stateCode = "W09";
+        } else {
+            stateCode = "W00";
+        }
+
+        return stateCode;
+    }
 }

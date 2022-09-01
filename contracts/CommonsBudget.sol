@@ -68,38 +68,6 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @return returns address of vote contract
     address public voteAddress;
 
-    enum ProposalType {
-        SYSTEM,
-        FUND
-    }
-
-    struct ProposalFeeData {
-        address payer;
-        uint256 value;
-        mapping(address => bool) voteFeePaid;
-    }
-
-    struct ProposalData {
-        ProposalStates state;
-        ProposalType proposalType;
-        ProposalResult proposalResult;
-        address proposer;
-        string title;
-        uint256 countingFinishTime;
-        bool fundWithdrawn;
-        uint64 start;
-        uint64 end;
-        uint64 startAssess;
-        uint64 endAssess;
-        bytes32 docHash;
-        uint256 fundAmount;
-        uint256 assessParticipantSize;
-        uint64[] assessData;
-        uint256 validatorSize;
-        uint64[] voteResult;
-        address voteAddress;
-    }
-
     mapping(bytes32 => ProposalFeeData) private feeMaps;
     mapping(bytes32 => ProposalData) private proposalMaps;
 
@@ -374,35 +342,19 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         return proposalMaps[_proposalID];
     }
 
+    function checkWithdrawState(bytes32 _proposalID) external returns (string memory code, uint256 countingFinishTime){
+        string memory stateCode = storageContract.checkWithdrawState(proposalMaps[_proposalID]);
+        if (keccak256(bytes(stateCode)) == keccak256(bytes("W01"))) {
+            return (stateCode, 0);
+        }
+
+        return (stateCode, proposalMaps[_proposalID].countingFinishTime);
+    }
+
     /// @notice withdraw the funds of the proposal
     /// @param _proposalID id of proposal
     function withdraw(bytes32 _proposalID) external override {
-        string memory stateCode;
-        // TODO: This part should be restored after solving the issue about contract size limit
-        //        if (proposalMaps[_proposalID].state == ProposalStates.INVALID) {
-        //            stateCode = "W01";
-        //        }
-        if (proposalMaps[_proposalID].proposalType == ProposalType.SYSTEM) {
-            stateCode = "W02";
-        }
-        // TODO: This part should be restored after solving the issue about contract size limit
-        //        else if (proposalMaps[_proposalID].state == ProposalStates.REJECTED) {
-        //            stateCode = "W03";
-        //        }
-        //        else if (proposalMaps[_proposalID].state < ProposalStates.FINISHED) {
-        //            stateCode = "W04";
-        //        }
-        else if (msg.sender != proposalMaps[_proposalID].proposer) {
-            stateCode = "W05";
-        } else if (proposalMaps[_proposalID].proposalResult != ProposalResult.APPROVED) {
-            stateCode = "W06";
-        } else if (block.timestamp - proposalMaps[_proposalID].countingFinishTime < 86400) {
-            stateCode = "W07";
-        } else if (proposalMaps[_proposalID].fundWithdrawn == true) {
-            stateCode = "W09";
-        } else {
-            stateCode = "W00";
-        }
+        string memory stateCode = storageContract.checkWithdrawState(proposalMaps[_proposalID]);
 
         require(keccak256(bytes(stateCode)) == keccak256(bytes("W00")), stateCode);
         proposalMaps[_proposalID].fundWithdrawn = true;
