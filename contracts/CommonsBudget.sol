@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import "./IVoteraVote.sol";
 import "./ICommonsBudget.sol";
+import "./CommonsStorage.sol";
 
 // The code about whether the fund can be withdrawn
 // "W00" : The fund can be withdrawn
@@ -24,40 +25,14 @@ import "./ICommonsBudget.sol";
 contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     event Received(address, uint256);
 
+    CommonsStorage storageContract;
+
     receive() external payable {
         emit Received(msg.sender, msg.value);
     }
 
-    // It is a fee for the funding proposal. This is not a unit of BOA.
-    // This is a thousand percent.
-    // Proposal Fee = Funding amount * fund_proposal_fee_permil / 1000
-    uint32 public fund_proposal_fee_permil;
-
-    // It is a fee for system proposals. Its unit is cent of BOA.
-    uint256 public system_proposal_fee;
-
-    // Factor required to calculate a valid quorum
-    // Quorum = Number of validators * vote_quorum_permil / 1000000
-    uint32 public vote_quorum_factor;
-
-    // It is a fee to be paid for the validator that participates
-    // in a voting, which is a voter. Its unit is cent of BOA.
-    uint256 public voter_fee;
-
-    // The max count of validators that CommonsBudget can distribute
-    // vote fess to in an attempt of distribution.
-    uint256 public vote_fee_distrib_count;
-
-    // The difference for approval between the net percent of positive votes
-    // and the net percentage of negative votes
-    uint256 public constant approval_diff_percent = 10;
-
-    constructor() {
-        fund_proposal_fee_permil = 10;
-        system_proposal_fee = 100000000000000000000;
-        vote_quorum_factor = 333333; // Number of validators / 3
-        voter_fee = 400000000000000;
-        vote_fee_distrib_count = 100;
+    constructor(address contractAddress) {
+        storageContract = CommonsStorage(contractAddress);
     }
 
     // TODO: This function should be restored after solving the issue about contract size limit
@@ -262,7 +237,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         ProposalInput calldata _proposalInput,
         bytes calldata _signature
     ) external payable override onlyInvalidProposal(_proposalID) {
-        require(msg.value >= system_proposal_fee, "InvalidFee");
+        require(msg.value >= storageContract.system_proposal_fee(), "InvalidFee");
         require(block.timestamp < _proposalInput.start && _proposalInput.start < _proposalInput.end, "InvalidInput");
 
         bytes32 dataHash = keccak256(
@@ -288,7 +263,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         ProposalInput calldata _proposalInput,
         bytes calldata _signature
     ) external payable override onlyInvalidProposal(_proposalID) {
-        uint256 _appropriateFee = (_proposalInput.amount * fund_proposal_fee_permil) / 1000;
+        uint256 _appropriateFee = (_proposalInput.amount * storageContract.fund_proposal_fee_permil()) / 1000;
         require(msg.value >= _appropriateFee, "InvalidFee");
         require(address(this).balance >= _proposalInput.amount, "NotEnoughBudget");
         require(
@@ -398,12 +373,12 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         proposalMaps[_proposalID].voteResult = _voteResult;
 
         // Check if it has sufficient number of quorum member
-        if (voteCount < (_validatorSize * vote_quorum_factor) / 1000000) {
+        if (voteCount < (_validatorSize * storageContract.vote_quorum_factor()) / 1000000) {
             proposalMaps[_proposalID].proposalResult = ProposalResult.INVALID_QUORUM;
         }
         // Check if it has sufficient number of positive votes
         else if (voteResult[1] <= voteResult[2] ||
-            ((voteResult[1] - voteResult[2]) * 100) / voteCount < approval_diff_percent) {
+            ((voteResult[1] - voteResult[2]) * 100) / voteCount < storageContract.approval_diff_percent()) {
             proposalMaps[_proposalID].proposalResult = ProposalResult.REJECTED;
         } else {
             proposalMaps[_proposalID].proposalResult = ProposalResult.APPROVED;
@@ -433,11 +408,11 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         IVoteraVote voteraVote = IVoteraVote(_voteAddress);
         uint256 validatorLength = voteraVote.getValidatorCount(_proposalID);
         require(_start < validatorLength, "InvalidInput");
-        for (uint256 i = _start; i < validatorLength && i < _start + vote_fee_distrib_count; i++) {
+        for (uint256 i = _start; i < validatorLength && i < _start + storageContract.vote_fee_distrib_count(); i++) {
             address validator = voteraVote.getValidatorAt(_proposalID, i);
             if (!feeMaps[_proposalID].voteFeePaid[validator]) {
                 feeMaps[_proposalID].voteFeePaid[validator] = true;
-                payable(validator).transfer(voter_fee);
+                payable(validator).transfer(storageContract.voter_fee());
             }
         }
     }

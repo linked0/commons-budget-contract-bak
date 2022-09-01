@@ -8,6 +8,8 @@ import * as assert from "assert";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
+    CommonsStorage,
+    CommonsStorage__factory as CommonsStorageFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
@@ -35,8 +37,9 @@ function toFundInput(
     return { start, end, startAssess, endAssess, docHash, amount, title };
 }
 
-describe("Test of Commons Budget Contract", () => {
+describe.only("Test of Commons Budget Contract", () => {
     let contract: CommonsBudget;
+    let storageContract: CommonsStorage;
     let voteraVote: VoteraVote;
 
     const basicFee = ethers.utils.parseEther("100.0");
@@ -60,6 +63,10 @@ describe("Test of Commons Budget Contract", () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         contract = await commonsBudgetFactory.deploy();
         await contract.deployed();
+
+        const storageAddress = await contract.getStorageContractAddress();
+        const storageFactory = await ethers.getContractFactory("CommonsStorage");
+        storageContract = await storageFactory.attach(storageAddress);
 
         const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
         voteraVote = await voteraVoteFactory.connect(voteManager).deploy();
@@ -121,19 +128,19 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     it("Check Proposal Fee", async () => {
-        const fundProposalFee = await contract.fund_proposal_fee_permil();
+        const fundProposalFee = await storageContract.fund_proposal_fee_permil();
         assert.deepStrictEqual(fundProposalFee.toString(), "10");
-        const systemProposalFe = await contract.system_proposal_fee();
+        const systemProposalFe = await storageContract.system_proposal_fee();
         assert.deepStrictEqual(systemProposalFe.toString(), "100000000000000000000");
     });
 
     it("Check Quorum Factor", async () => {
-        const factor = await contract.vote_quorum_factor();
+        const factor = await storageContract.vote_quorum_factor();
         assert.deepStrictEqual(factor, 333333);
     });
 
     it("Check Voter Fee", async () => {
-        const voterFee = await contract.voter_fee();
+        const voterFee = await storageContract.voter_fee();
         assert.deepStrictEqual(voterFee.toNumber(), 400000000000000);
     });
 
@@ -179,6 +186,10 @@ describe("Test of Commons Budget Contract", () => {
     // });
 
     it("changeVoteParam", async () => {
+        // const commonsStorageFactory = await ethers.getContractFactory("CommonsStorage");
+        // storage = await commonsStorageFactory.deploy();
+        // await storage.deployed();
+
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         const testContract = await commonsBudgetFactory.deploy();
         await testContract.deployed();
@@ -466,7 +477,7 @@ describe("Test of Commons Budget Contract", () => {
         const endTime = startTime + 30000;
         const docHash = DocHash;
         const proposer = validators[0].address;
-        const feePermil = await contract.fund_proposal_fee_permil();
+        const feePermil = await storageContract.fund_proposal_fee_permil();
         const wantedFee = fundAmount.mul(feePermil).div(1000);
         const wrongFee = wantedFee.div(2);
         const signProposal = await signFundProposal(
