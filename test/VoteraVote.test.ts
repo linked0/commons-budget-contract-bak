@@ -7,6 +7,8 @@ import { ethers, network, waffle } from "hardhat";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
+    CommonsStorage,
+    CommonsStorage__factory as CommonsStorageFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";

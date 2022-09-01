@@ -6,6 +6,8 @@ import { ethers, network, waffle } from "hardhat";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
+    CommonsStorage,
+    CommonsStorage__factory as CommonsStorageFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
@@ -51,6 +53,7 @@ async function displayBalance(address: string, message: string) {
 
 describe("Test of Vote Decision", () => {
     let commonsBudget: CommonsBudget;
+    let commonsStorage: CommonsStorage;
     let voteraVote: VoteraVote;
 
     const { provider } = waffle;
@@ -76,6 +79,10 @@ describe("Test of Vote Decision", () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         commonsBudget = await commonsBudgetFactory.connect(admin).deploy();
         await commonsBudget.deployed();
+
+        const storageAddress = await commonsBudget.getStorageContractAddress();
+        const storageFactory = await ethers.getContractFactory("CommonsStorage");
+        commonsStorage = await storageFactory.attach(storageAddress);
 
         // deploy VoteraVote
         const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
@@ -165,7 +172,8 @@ describe("Test of Vote Decision", () => {
         );
 
         // distribute vote fess to validators
-        const maxCountDist = (await commonsBudget.connect(adminSigner).vote_fee_distrib_count()).toNumber();
+        const maxCountDist = (await commonsStorage.vote_fee_distrib_count()).toNumber();
+        // const maxCountDist = (await commonsBudget.connect(adminSigner).vote_fee_distrib_count()).toNumber();
         const distCallCount = validators.length / maxCountDist;
         for (let i = 0; i < distCallCount; i += 1) {
             const start = i * maxCountDist;
