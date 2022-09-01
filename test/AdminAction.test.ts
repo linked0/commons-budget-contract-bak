@@ -8,6 +8,8 @@ import * as assert from "assert";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
+    CommonsStorage,
+    CommonsStorage__factory as CommonsStorageFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
@@ -22,6 +24,7 @@ chai.use(solidity);
 describe("Test actions by contract owner", () => {
     let contract: CommonsBudget;
     let voteraVote: VoteraVote;
+    let storageContract: CommonsStorage;
 
     const basicFee = ethers.utils.parseEther("100.0");
     const fundAmount = ethers.utils.parseEther("10000.0");
@@ -37,6 +40,10 @@ describe("Test actions by contract owner", () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         contract = (await commonsBudgetFactory.deploy()) as CommonsBudget;
         await contract.deployed();
+
+        const storageAddress = await contract.getStorageContractAddress();
+        const storageFactory = await ethers.getContractFactory("CommonsStorage");
+        storageContract = await storageFactory.attach(storageAddress);
 
         const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
         voteraVote = await voteraVoteFactory.connect(admin).deploy();
@@ -111,7 +118,7 @@ describe("Test actions by contract owner", () => {
 
         // create more validators and have 108 validators in total
         let manyValidators: Wallet[] = validators;
-        const addCount = (await contract.vote_fee_distrib_count()).toNumber();
+        const addCount = (await storageContract.vote_fee_distrib_count()).toNumber();
         for (let i = 0; i < addCount; i += 1) {
             manyValidators = manyValidators.concat(provider.createEmptyWallet());
         }
@@ -148,7 +155,8 @@ describe("Test actions by contract owner", () => {
         }
 
         // distribute vote fess to validators
-        const maxCountDist = (await contract.connect(adminSigner).vote_fee_distrib_count()).toNumber();
+        const maxCountDist = (await storageContract.vote_fee_distrib_count()).toNumber();
+        // const maxCountDist = (await contract.connect(adminSigner).vote_fee_distrib_count()).toNumber();
         const distCallCount = valAddresses.length / maxCountDist;
         for (let i = 0; i < distCallCount; i += 1) {
             const start = i * maxCountDist;
@@ -158,7 +166,7 @@ describe("Test actions by contract owner", () => {
 
         // compares voters' balances with previous balances
         // the specified fee should be added to all the voters' balances
-        const voterFee = await contract.voter_fee();
+        const voterFee = await storageContract.voter_fee();
         await network.provider.send("evm_mine");
         for (const address of valAddresses) {
             const curBalance = await provider.getBalance(address);
