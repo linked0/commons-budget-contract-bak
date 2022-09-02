@@ -339,7 +339,7 @@ describe("Test of Vote Decision", () => {
     // Voting is rejected because negative votes are more than positive ones
     it("finishVote: Rejected with too many negative votes", async () => {
         await createFundProposal();
-        await processVote( 33, 34,13);
+        await processVote(33, 34, 13);
 
         const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
         const proposalData = await voteBudget.getProposalData(proposalID);
@@ -355,7 +355,7 @@ describe("Test of Vote Decision", () => {
     // and negative votes to the quorum is more than 0.01.
     it("finishVote: Approved with approval votes with more than 10 percent", async () => {
         await createFundProposal();
-        await processVote( 42, 34, 4);
+        await processVote(42, 34, 4);
 
         const voteBudget = CommonsBudgetFactory.connect(commonsBudget.address, voteManager);
         const proposalData = await voteBudget.getProposalData(proposalID);
