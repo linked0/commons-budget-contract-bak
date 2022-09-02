@@ -72,3 +72,11 @@ export function signCommitment(
     const sig = signer._signingKey().signDigest(ethers.utils.keccak256(encodedResult));
     return Promise.resolve(ethers.utils.joinSignature(sig));
 }
+
+export async function displayBalance(
+    address: string,
+    message: string
+) {
+    const balance = await ethers.provider.getBalance(address);
+    console.log(`${message}_balance = ${balance.toString()}`);
+}
