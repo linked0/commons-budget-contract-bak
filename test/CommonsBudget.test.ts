@@ -76,9 +76,6 @@ describe.only("Test of Commons Budget Contract", () => {
         const voteAddress = voteraVote.address;
         const changeParamTx = await contract.changeVoteParam(voteManager.address, voteAddress);
         await changeParamTx.wait();
-
-        console.log("contract: ", contract.address, ", storage: ", storageAddress,
-            ", voteAddress: ", voteAddress);
     });
 
     beforeEach(() => {
@@ -214,7 +211,7 @@ describe.only("Test of Commons Budget Contract", () => {
         await expect(contract.changeVoteParam(AddressNormal, AddressZero)).to.be.revertedWith("InvalidInput");
     });
 
-    it.only("createSystemProposal", async () => {
+    it("createSystemProposal", async () => {
         const blockLatest = await ethers.provider.getBlock("latest");
         const title = "SystemProposalTitle";
         const startTime = blockLatest.timestamp + 30000;
@@ -223,7 +220,6 @@ describe.only("Test of Commons Budget Contract", () => {
         const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        await displayBalance(validators[0].address, "validator[0]");
         const makeProposalTx = await validatorBudget.createSystemProposal(
             proposal,
             toSystemInput(title, startTime, endTime, docHash),

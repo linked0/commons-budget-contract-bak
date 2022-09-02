@@ -181,7 +181,6 @@ contract CommonsStorage is ICommonsStorage {
         proposalMaps[_proposalID].fundAmount = _proposalInput.amount;
         proposalMaps[_proposalID].proposer = proposer;
         proposalMaps[_proposalID].voteAddress = voteAddress;
-        console.log("voteAddress of proposal:", proposalMaps[_proposalID].voteAddress);
     }
 
     /// @notice create system proposal
@@ -237,7 +236,7 @@ contract CommonsStorage is ICommonsStorage {
                 _proposalInput.endAssess,
                 _proposalInput.docHash,
                 _proposalInput.amount,
-                msg.sender
+                proposer
             )
         );
         require(ECDSA.recover(dataHash, _signature) == voteManager, "InvalidInput");
