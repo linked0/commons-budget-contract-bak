@@ -268,6 +268,7 @@ contract CommonsStorage is ICommonsStorage {
             for (uint256 j = 0; j < _assessData.length; j++) {
                 if (_assessData[j] < minPass) {
                     proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
+                    return;
                 }
                 sum += _assessData[j];
             }
@@ -275,6 +276,7 @@ contract CommonsStorage is ICommonsStorage {
             minPass = _assessData.length * 7 * _assessParticipantSize;
             if (sum < minPass) {
                 proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
+                return;
             }
 
             proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.ACCEPTED;

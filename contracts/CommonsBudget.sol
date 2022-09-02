@@ -144,6 +144,14 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         storageContract.changeVoteParam(_voteManager, _voteAddress);
     }
 
+    function onlyNotAssessedFundProposal(bytes32 _proposalID) internal {
+        ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
+        require(proposalData.state != ICommonsBudget.ProposalStates.INVALID, "NotFoundProposal");
+        require(proposalData.proposalType == ICommonsBudget.ProposalType.FUND, "InvalidProposal");
+        require(proposalData.state == ICommonsBudget.ProposalStates.CREATED, "AlreadyFinishedAssessment");
+        require(block.timestamp >= proposalData.endAssess, "DuringAssessment");
+    }
+
     function onlyNotFinishedProposal (bytes32 _proposalID) internal {
         ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
         require(proposalData.state != ICommonsBudget.ProposalStates.INVALID, "NotFoundProposal");
@@ -186,7 +194,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         external
         override
     {
-        onlyNotFinishedProposal(_proposalID);
+        onlyNotAssessedFundProposal(_proposalID);
         onlyBeforeVoteStart(_proposalID);
         onlyVoteContract(_proposalID);
         storageContract.assessProposal(_proposalID, _validatorSize, _assessParticipantSize, _assessData);
