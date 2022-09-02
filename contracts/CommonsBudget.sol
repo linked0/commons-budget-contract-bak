@@ -402,8 +402,10 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
             proposalMaps[_proposalID].proposalResult = ProposalResult.INVALID_QUORUM;
         }
         // Check if it has sufficient number of positive votes
-        else if (voteResult[1] <= voteResult[2] ||
-            ((voteResult[1] - voteResult[2]) * 100) / voteCount < approval_diff_percent) {
+        else if (
+            voteResult[1] <= voteResult[2] ||
+            ((voteResult[1] - voteResult[2]) * 100) / voteCount < approval_diff_percent
+        ) {
             proposalMaps[_proposalID].proposalResult = ProposalResult.REJECTED;
         } else {
             proposalMaps[_proposalID].proposalResult = ProposalResult.APPROVED;
