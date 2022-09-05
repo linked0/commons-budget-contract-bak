@@ -178,9 +178,13 @@ describe("Test of Commons Budget Contract", () => {
         const testContract = await commonsBudgetFactory.deploy();
         await testContract.deployed();
 
+        const storageAddress = await testContract.getStorageContractAddress();
+        const storageFactory = await ethers.getContractFactory("CommonsStorage");
+        storageContract = await storageFactory.attach(storageAddress);
+
         await testContract.changeVoteParam(admin.address, contract.address);
-        expect(await testContract.voteManager()).equal(admin.address);
-        expect(await testContract.voteAddress()).equal(contract.address);
+        expect(await storageContract.voteManager()).equal(admin.address);
+        expect(await storageContract.voteAddress()).equal(contract.address);
     });
 
     it("changeVoteParam: Ownable: caller is not the owner", async () => {

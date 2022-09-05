@@ -294,9 +294,8 @@ describe("Test of Fund Withdrawal", () => {
         await createFundProposal();
         await assessProposal(true);
 
-        // TODO: This check should be restored after solving the issue about contract size limit
         // "W04" : The vote counting is not yet complete
-        // await expect(validatorBudget.withdraw(proposal)).to.revertedWith("W04");
+        await expect(commonsBudget.withdraw(proposalID)).to.revertedWith("W04");
 
         // Vote counting finished
         // Positive: 18, Negative: 15, Blank: 0
