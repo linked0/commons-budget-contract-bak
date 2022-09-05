@@ -47,6 +47,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
                 this.assessProposal.selector ^
                 this.finishVote.selector ^
                 this.distributeVoteFees.selector ^
+                this.checkWithdrawState.selector ^
                 this.withdraw.selector;
     }
 
@@ -261,6 +262,25 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @return returns proposal data
     function getProposalData(bytes32 _proposalID) public view returns (ProposalData memory) {
         return storageContract.getProposalData(_proposalID);
+    }
+
+    /// @notice withdraw the funds of the proposal
+    /// @param _proposalID id of proposal
+    /// @return code the status code
+    /// @return countingFinishTime the time of the vote counting
+    function checkWithdrawState(bytes32 _proposalID)
+        external
+        view
+        override
+        returns (string memory code, uint256 countingFinishTime)
+    {
+        string memory stateCode = storageContract.checkWithdrawState(_proposalID, msg.sender);
+        if (keccak256(bytes(stateCode)) == keccak256(bytes("W01"))) {
+            return (stateCode, 0);
+        }
+
+        ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
+        return (stateCode, proposalData.countingFinishTime);
     }
 
     /// @notice withdraw the funds of the proposal

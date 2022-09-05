@@ -114,5 +114,14 @@ interface ICommonsBudget {
 
     /// @notice withdraw the funds of the proposal
     /// @param _proposalID id of proposal
+    /// @return code the status code
+    /// @return countingFinishTime the time of the vote counting
+    function checkWithdrawState(bytes32 _proposalID)
+        external
+        view
+        returns (string memory code, uint256 countingFinishTime);
+
+    /// @notice withdraw the funds of the proposal
+    /// @param _proposalID id of proposal
     function withdraw(bytes32 _proposalID) external;
 }
