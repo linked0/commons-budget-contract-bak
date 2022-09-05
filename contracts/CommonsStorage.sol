@@ -3,9 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "./IVoteraVote.sol";
 import "./ICommonsBudget.sol";
 import "./ICommonsStorage.sol";
+import "./IVoteraVote.sol";
 
 contract CommonsStorage is ICommonsStorage {
     // The address of the owner that created the CommonsBudget contract
@@ -37,6 +37,15 @@ contract CommonsStorage is ICommonsStorage {
     // The difference for approval between the net percent of positive votes
     // and the net percentage of negative votes
     uint256 public constant approval_diff_percent = 10;
+
+    mapping(bytes32 => ICommonsBudget.ProposalData) internal proposalMaps;
+
+    /// @notice vote manager is votera vote server
+    /// @return returns address of vote manager
+    address public voteManager;
+    /// @notice vote address is votera vote contract
+    /// @return returns address of vote contract
+    address public voteAddress;
 
     constructor(address _owner, address _budgetAddress) {
         owner = _owner;
@@ -71,5 +80,210 @@ contract CommonsStorage is ICommonsStorage {
     modifier onlyOwner() {
         require(msg.sender == owner, "NotAuthorized");
         _;
+    }
+
+    modifier onlyCommonsBudget() {
+        require(msg.sender == commonsBudgetAddress, "NotAuthorized");
+        _;
+    }
+
+    /// @notice change votera vote system parameter
+    /// @param _voteManager address of voteManager
+    /// @param _voteAddress address of voteraVote contract
+    function changeVoteParam(address _voteManager, address _voteAddress) public onlyCommonsBudget {
+        require(_voteManager != address(0) && _voteAddress != address(0), "InvalidInput");
+        voteManager = _voteManager;
+        voteAddress = _voteAddress;
+    }
+
+    function saveProposalData(
+        ICommonsBudget.ProposalType _proposalType,
+        bytes32 _proposalID,
+        address proposer,
+        ICommonsBudget.ProposalInput calldata _proposalInput
+    ) private {
+        proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.CREATED;
+        proposalMaps[_proposalID].proposalType = _proposalType;
+        proposalMaps[_proposalID].title = _proposalInput.title;
+        proposalMaps[_proposalID].start = _proposalInput.start;
+        proposalMaps[_proposalID].end = _proposalInput.end;
+        proposalMaps[_proposalID].startAssess = _proposalInput.startAssess;
+        proposalMaps[_proposalID].endAssess = _proposalInput.endAssess;
+        proposalMaps[_proposalID].docHash = _proposalInput.docHash;
+        proposalMaps[_proposalID].fundAmount = _proposalInput.amount;
+        proposalMaps[_proposalID].proposer = proposer;
+        proposalMaps[_proposalID].voteAddress = voteAddress;
+    }
+
+    /// @notice create system proposal
+    /// @param _proposalID id of proposal
+    /// @param _proposalInput input data of proposal
+    /// @param _signature signature data from vote manager of proposal
+    function createSystemProposal(
+        bytes32 _proposalID,
+        address proposer,
+        ICommonsBudget.ProposalInput calldata _proposalInput,
+        bytes calldata _signature
+    ) external onlyCommonsBudget {
+        require(block.timestamp < _proposalInput.start && _proposalInput.start < _proposalInput.end, "InvalidInput");
+        bytes32 dataHash = keccak256(
+            abi.encode(
+                _proposalID,
+                _proposalInput.title,
+                _proposalInput.start,
+                _proposalInput.end,
+                _proposalInput.docHash
+            )
+        );
+        require(ECDSA.recover(dataHash, _signature) == voteManager, "InvalidInput");
+
+        saveProposalData(ICommonsBudget.ProposalType.SYSTEM, _proposalID, proposer, _proposalInput);
+    }
+
+    /// @notice create fund proposal
+    /// @param _proposalID id of proposal
+    /// @param _proposalInput input data of proposal
+    /// @param _signature signature data from vote manager of proposal
+    function createFundProposal(
+        bytes32 _proposalID,
+        address proposer,
+        ICommonsBudget.ProposalInput calldata _proposalInput,
+        bytes calldata _signature
+    ) external onlyCommonsBudget {
+        require(
+            block.timestamp < _proposalInput.endAssess &&
+                _proposalInput.startAssess < _proposalInput.endAssess &&
+                _proposalInput.endAssess < _proposalInput.start &&
+                _proposalInput.start < _proposalInput.end,
+            "InvalidInput"
+        );
+
+        bytes32 dataHash = keccak256(
+            abi.encode(
+                _proposalID,
+                _proposalInput.title,
+                _proposalInput.start,
+                _proposalInput.end,
+                _proposalInput.startAssess,
+                _proposalInput.endAssess,
+                _proposalInput.docHash,
+                _proposalInput.amount,
+                proposer
+            )
+        );
+        require(ECDSA.recover(dataHash, _signature) == voteManager, "InvalidInput");
+
+        saveProposalData(ICommonsBudget.ProposalType.FUND, _proposalID, proposer, _proposalInput);
+    }
+
+    function getProposalData(bytes32 _proposalID) public view returns (ICommonsBudget.ProposalData memory) {
+        return proposalMaps[_proposalID];
+    }
+
+    function assessProposal(
+        bytes32 _proposalID,
+        uint256 _validatorSize,
+        uint256 _assessParticipantSize,
+        uint64[] calldata _assessData
+    ) external onlyCommonsBudget {
+        proposalMaps[_proposalID].validatorSize = _validatorSize;
+        proposalMaps[_proposalID].assessParticipantSize = _assessParticipantSize;
+        proposalMaps[_proposalID].assessData = _assessData;
+
+        if (_assessParticipantSize > 0) {
+            uint256 minPass = 5 * _assessParticipantSize; // average 5 each
+            uint256 sum = 0;
+            for (uint256 j = 0; j < _assessData.length; j++) {
+                if (_assessData[j] < minPass) {
+                    proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
+                    return;
+                }
+                sum += _assessData[j];
+            }
+            // check total average 7 above
+            minPass = _assessData.length * 7 * _assessParticipantSize;
+            if (sum < minPass) {
+                proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
+                return;
+            }
+
+            proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.ACCEPTED;
+        } else {
+            proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
+        }
+    }
+
+    function finishVote(
+        bytes32 _proposalID,
+        uint256 _validatorSize,
+        uint64[] calldata _voteResult
+    ) external onlyCommonsBudget {
+        address _voteAddress = proposalMaps[_proposalID].voteAddress;
+        IVoteraVote voteraVote = IVoteraVote(_voteAddress);
+        require(voteManager == voteraVote.getManager(), "InvalidVote");
+        require(_validatorSize == voteraVote.getValidatorCount(_proposalID), "InvalidInput");
+
+        proposalMaps[_proposalID].countingFinishTime = block.timestamp;
+        proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.FINISHED;
+        proposalMaps[_proposalID].validatorSize = _validatorSize;
+        proposalMaps[_proposalID].voteResult = _voteResult;
+
+        uint64[] memory voteResult = voteraVote.getVoteResult(_proposalID);
+        require(voteResult.length == _voteResult.length, "InvalidInput");
+        uint256 voteCount = 0;
+        for (uint256 i = 0; i < voteResult.length; i++) {
+            require(voteResult[i] == _voteResult[i], "InvalidInput");
+            voteCount += voteResult[i];
+        }
+
+        // Check if it has sufficient number of quorum member
+        if (voteCount < (_validatorSize * vote_quorum_factor) / 1000000) {
+            proposalMaps[_proposalID].proposalResult = ICommonsBudget.ProposalResult.INVALID_QUORUM;
+        }
+        // Check if it has sufficient number of positive votes
+        else if (
+            voteResult[1] <= voteResult[2] ||
+            ((voteResult[1] - voteResult[2]) * 100) / voteCount < approval_diff_percent
+        ) {
+            proposalMaps[_proposalID].proposalResult = ICommonsBudget.ProposalResult.REJECTED;
+        } else {
+            proposalMaps[_proposalID].proposalResult = ICommonsBudget.ProposalResult.APPROVED;
+        }
+    }
+
+    function checkWithdrawState(bytes32 _proposalID, address requestAddress)
+        external
+        view
+        returns (string memory code)
+    {
+        string memory stateCode;
+        ICommonsBudget.ProposalData memory _proposalData = proposalMaps[_proposalID];
+        if (_proposalData.state == ICommonsBudget.ProposalStates.INVALID) {
+            stateCode = "W01";
+        } else if (_proposalData.proposalType == ICommonsBudget.ProposalType.SYSTEM) {
+            stateCode = "W02";
+        } else if (_proposalData.state == ICommonsBudget.ProposalStates.REJECTED) {
+            stateCode = "W03";
+        } else if (_proposalData.state < ICommonsBudget.ProposalStates.FINISHED) {
+            stateCode = "W04";
+        } else if (_proposalData.proposer != requestAddress) {
+            stateCode = "W05";
+        } else if (_proposalData.proposalResult != ICommonsBudget.ProposalResult.APPROVED) {
+            stateCode = "W06";
+        } else if (block.timestamp - _proposalData.countingFinishTime < 86400) {
+            stateCode = "W07";
+        } else if (_proposalData.fundWithdrawn == true) {
+            stateCode = "W09";
+        } else if (_proposalData.fundAmount > commonsBudgetAddress.balance) {
+            stateCode = "W10";
+        } else {
+            stateCode = "W00";
+        }
+
+        return stateCode;
+    }
+
+    function setWithdrawn(bytes32 _proposalID) external onlyCommonsBudget {
+        proposalMaps[_proposalID].fundWithdrawn = true;
     }
 }
