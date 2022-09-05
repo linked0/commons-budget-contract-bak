@@ -284,17 +284,26 @@ describe("Test of Fund Withdrawal", () => {
 
         // "W02" : The proposal is not a fund proposal
         const proposerBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[0]);
+        const [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W02");
         await expect(proposerBudget.withdraw(proposalID)).to.revertedWith("W02");
     });
 
-    it("Withdrawal: Unable to withdraw due to W05, W06", async () => {
+    it("Withdrawal: Unable to withdraw due to W01, W04, W05, W06", async () => {
         const proposerBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[0]);
         const fakeValidatorBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[1]);
 
         await createFundProposal();
         await assessProposal(true);
 
+        // "W01" : There's no proposal for the proposal ID
+        let [stateCode, _] = await proposerBudget.checkWithdrawState(InvalidProposal);
+        expect(stateCode).equals("W01");
+        await expect(commonsBudget.withdraw(InvalidProposal)).to.revertedWith("W01");
+
         // "W04" : The vote counting is not yet complete
+        [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W04");
         await expect(commonsBudget.withdraw(proposalID)).to.revertedWith("W04");
 
         // Vote counting finished
@@ -302,9 +311,13 @@ describe("Test of Fund Withdrawal", () => {
         await countVote(18, 15, 0);
 
         // "W05" : The requester of the funding is not the proposer
+        [stateCode, _] = await fakeValidatorBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W05");
         await expect(fakeValidatorBudget.withdraw(proposalID)).to.revertedWith("W05");
 
         // "W06" : The proposal has come to invalid or been rejected
+        [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W06");
         await expect(proposerBudget.withdraw(proposalID)).to.revertedWith("W06");
     });
 
@@ -318,6 +331,8 @@ describe("Test of Fund Withdrawal", () => {
         await countVote(42, 34, 4);
 
         // "W07" : 24 hours has not passed after the voting finished
+        let [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W07");
         await expect(proposerBudget.withdraw(proposalID)).to.revertedWith("W07");
 
         // 12 hours passed
@@ -325,6 +340,8 @@ describe("Test of Fund Withdrawal", () => {
         await network.provider.send("evm_mine");
 
         // "W07" again
+        [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W07");
         await expect(proposerBudget.withdraw(proposalID)).to.revertedWith("W07");
 
         // 12 hours passed
@@ -343,6 +360,8 @@ describe("Test of Fund Withdrawal", () => {
         expect(curBalance.sub(prevBalance)).equal(requestedFund);
 
         // "W09" : The funds is already withdrawn
+        [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W09");
         await expect(proposerBudget.withdraw(proposalID)).to.revertedWith("W09");
     });
 });
