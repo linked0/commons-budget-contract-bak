@@ -51,7 +51,7 @@ async function displayBalance(address: string, message: string) {
     console.log(`${message}_balance = ${balance.toString()}`);
 }
 
-describe("Test of Fund Withdrawal", () => {
+describe.only("Test of Fund Withdrawal", () => {
     let commonsBudget: CommonsBudget;
     let commonsStorage: CommonsStorage;
     let voteraVote: VoteraVote;
@@ -286,7 +286,16 @@ describe("Test of Fund Withdrawal", () => {
         const proposerBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[0]);
         const [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
         expect(stateCode).equals("W02");
-        await expect(proposerBudget.withdraw(proposalID)).to.revertedWith("W02");
+
+        // const withdrawTx  = await proposerBudget.withdraw(proposalID);
+        // const txReceipt = await withdrawTx.wait();
+        // console.log("txReceipt: ", txReceipt);
+        // const fundWithdrawnEvent = txReceipt.events;
+        // const  eventArgs = fundWithdrawnEvent.args;
+        // console.log("code: ", eventArgs);
+        await expect(proposerBudget.withdraw(proposalID))
+            .to.emit(proposerBudget, "FundWithdrawn")
+            .withArgs(proposalID, "W02");
     });
 
     it("Withdrawal: Unable to withdraw due to W01, W04, W05, W06", async () => {

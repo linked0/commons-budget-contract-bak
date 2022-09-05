@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./IVoteraVote.sol";
 import "./ICommonsBudget.sol";
 import "./CommonsStorage.sol";
+import "hardhat/console.sol";
 
 // The code about whether the fund can be withdrawn
 // "W00" : The fund can be withdrawn
@@ -29,6 +30,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     CommonsStorage storageContract;
 
     mapping(bytes32 => ICommonsBudget.ProposalFeeData) internal feeMaps;
+
+    event FundWithdrawn(bytes32 _proposalID, string stateCode);
 
     receive() external payable {
         emit Received(msg.sender, msg.value);
@@ -288,12 +291,18 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     /// @notice withdraw the funds of the proposal
     /// @param _proposalID id of proposal
-    function withdraw(bytes32 _proposalID) external override {
+    /// @return code the status code
+    function withdraw(bytes32 _proposalID) external override returns (string memory code){
         string memory stateCode = storageContract.checkWithdrawState(_proposalID, msg.sender);
-        require(keccak256(bytes(stateCode)) == keccak256(bytes("W00")), stateCode);
+        if(keccak256(bytes(stateCode)) == keccak256(bytes("W00"))){
+            storageContract.setWithdrawn(_proposalID);
+            ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
+            payable(msg.sender).transfer(proposalData.fundAmount);
+            console.log("withdraw transfer fund");
+        }
 
-        storageContract.setWithdrawn(_proposalID);
-        ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
-        payable(msg.sender).transfer(proposalData.fundAmount);
+        console.log("withdraw stateCode: ", stateCode);
+        emit FundWithdrawn(_proposalID, stateCode);
+        return stateCode;
     }
 }

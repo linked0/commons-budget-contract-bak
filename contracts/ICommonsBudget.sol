@@ -123,5 +123,6 @@ interface ICommonsBudget {
 
     /// @notice withdraw the funds of the proposal
     /// @param _proposalID id of proposal
-    function withdraw(bytes32 _proposalID) external;
+    /// @return code the status code
+    function withdraw(bytes32 _proposalID) external returns (string memory code);
 }
