@@ -353,7 +353,7 @@ describe("Test of Fund Withdrawal", () => {
         const requestedFund = fundAmount.div(BigNumber.from(10).pow(18));
 
         // Withdrawal success and check the proposer's balance
-        await proposerBudget.withdraw(proposalID);
+        await expect(proposerBudget.withdraw(proposalID)).to.emit(proposerBudget, "FundTransfer").withArgs(proposalID);
 
         let curBalance = await ethers.provider.getBalance(validators[0].address);
         curBalance = curBalance.div(BigNumber.from(10).pow(18));
