@@ -104,6 +104,9 @@ contract CommonsStorage is ICommonsStorage {
     ) private {
         proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.CREATED;
         proposalMaps[_proposalID].proposalType = _proposalType;
+        if (_proposalType == ICommonsBudget.ProposalType.FUND) {
+            proposalMaps[_proposalID].fundingAllowed = true;
+        }
         proposalMaps[_proposalID].title = _proposalInput.title;
         proposalMaps[_proposalID].start = _proposalInput.start;
         proposalMaps[_proposalID].end = _proposalInput.end;
@@ -251,6 +254,11 @@ contract CommonsStorage is ICommonsStorage {
         }
     }
 
+    function setFundingAllowed(bytes32 _proposalID, bool allow) external onlyCommonsBudget {
+        require(block.timestamp - proposalMaps[_proposalID].countingFinishTime < 86400, "InvalidTime");
+        proposalMaps[_proposalID].fundingAllowed = allow;
+    }
+
     function checkWithdrawState(bytes32 _proposalID, address requestAddress)
         external
         view
@@ -272,6 +280,8 @@ contract CommonsStorage is ICommonsStorage {
             stateCode = "W06";
         } else if (block.timestamp - _proposalData.countingFinishTime < 86400) {
             stateCode = "W07";
+        } else if (_proposalData.fundingAllowed == false) {
+            stateCode = "W08";
         } else if (_proposalData.fundWithdrawn == true) {
             stateCode = "W09";
         } else if (_proposalData.fundAmount > commonsBudgetAddress.balance) {

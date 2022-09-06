@@ -83,6 +83,13 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         _;
     }
 
+    modifier onlyApprovedFundProposal(bytes32 _proposalID) {
+        ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
+        require(proposalData.proposalType == ICommonsBudget.ProposalType.FUND, "InvalidProposal");
+        require(proposalData.proposalResult == ICommonsBudget.ProposalResult.APPROVED, "NotApprovedProposal");
+        _;
+    }
+
     modifier onlyBeforeVoteStart(bytes32 _proposalID) {
         ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
         require(block.timestamp < proposalData.start, "TooLate");
@@ -266,6 +273,18 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @return returns proposal data
     function getProposalData(bytes32 _proposalID) public view returns (ProposalData memory) {
         return storageContract.getProposalData(_proposalID);
+    }
+
+    /// @notice refuse funding for the proposal
+    /// @param _proposalID id of proposal
+    function refuseFunding(bytes32 _proposalID) external override onlyOwner onlyApprovedFundProposal(_proposalID) {
+        storageContract.setFundingAllowed(_proposalID, false);
+    }
+
+    /// @notice allow funding for the proposal
+    /// @param _proposalID id of proposal
+    function allowFunding(bytes32 _proposalID) external override onlyOwner onlyApprovedFundProposal(_proposalID) {
+        storageContract.setFundingAllowed(_proposalID, true);
     }
 
     /// @notice withdraw the funds of the proposal

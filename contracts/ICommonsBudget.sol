@@ -38,6 +38,7 @@ interface ICommonsBudget {
         address proposer;
         string title;
         uint256 countingFinishTime;
+        bool fundingAllowed;
         bool fundWithdrawn;
         uint64 start;
         uint64 end;
@@ -111,6 +112,14 @@ interface ICommonsBudget {
     /// @param _start the start index of validators that
     ///     is to receive a vote fee.
     function distributeVoteFees(bytes32 _proposalID, uint256 _start) external;
+
+    /// @notice refuse funding for the proposal
+    /// @param _proposalID id of proposal
+    function refuseFunding(bytes32 _proposalID) external;
+
+    /// @notice allow funding for the proposal
+    /// @param _proposalID id of proposal
+    function allowFunding(bytes32 _proposalID) external;
 
     /// @notice withdraw the funds of the proposal
     /// @param _proposalID id of proposal
