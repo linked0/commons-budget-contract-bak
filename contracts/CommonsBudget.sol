@@ -27,6 +27,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     event Received(address, uint256);
 
     CommonsStorage storageContract;
+    ICommonsStorage upgradableStorage;
 
     mapping(bytes32 => ICommonsBudget.ProposalFeeData) internal feeMaps;
 
@@ -40,6 +41,10 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     constructor() {
         storageContract = new CommonsStorage(msg.sender, address(this));
+    }
+
+    function upgradeCommonsStorage(address storageAddress) external {
+        upgradableStorage = ICommonsStorage(storageAddress);
     }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {

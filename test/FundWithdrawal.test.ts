@@ -364,4 +364,11 @@ describe("Test of Fund Withdrawal", () => {
         expect(stateCode).equals("W09");
         await expect(proposerBudget.withdraw(proposalID)).to.revertedWith("W09");
     });
+
+    it.only("Withdrawal: Call to CommonsStorage", async () => {
+        const proposerBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[0]);
+        await createFundProposal();
+
+        // await commonsStorage.setWithdrawn(proposalID);
+    });
 });

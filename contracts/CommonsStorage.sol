@@ -284,7 +284,7 @@ contract CommonsStorage is ICommonsStorage {
         return stateCode;
     }
 
-    function setWithdrawn(bytes32 _proposalID) external onlyCommonsBudget {
+    function setWithdrawn(bytes32 _proposalID) external override onlyCommonsBudget {
         proposalMaps[_proposalID].fundWithdrawn = true;
     }
 }

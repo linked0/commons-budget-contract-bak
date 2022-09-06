@@ -18,4 +18,6 @@ interface ICommonsStorage {
     /// @notice set a voter fee
     /// @param _value a value of the cent of BOA
     function setVoterFee(uint256 _value) external;
+
+    function setWithdrawn(bytes32 _proposalID) external;
 }
