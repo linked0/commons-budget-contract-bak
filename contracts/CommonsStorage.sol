@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./ICommonsBudget.sol";
 import "./ICommonsStorage.sol";
 import "./IVoteraVote.sol";
+import "./ProposalStorage.sol";
 
-contract CommonsStorage is ICommonsStorage {
+contract CommonsStorage is ICommonsStorage, ProposalStorage {
     // The address of the owner that created the CommonsBudget contract
     address private owner;
 
@@ -38,7 +39,6 @@ contract CommonsStorage is ICommonsStorage {
     // and the net percentage of negative votes
     uint256 public constant approval_diff_percent = 10;
 
-    mapping(bytes32 => ICommonsBudget.ProposalData) internal proposalMaps;
 
     /// @notice vote manager is votera vote server
     /// @return returns address of vote manager
