@@ -13,7 +13,16 @@ import {
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain";
-import { makeCommitment, signCommitment, signFundProposal, signSystemProposal } from "./VoteHelper";
+import {
+    assessProposal, countVoteResult,
+    createFundProposal,
+    createSystemProposal,
+    makeCommitment,
+    setEnvironment,
+    signCommitment,
+    signFundProposal,
+    signSystemProposal
+} from "./VoteHelper";
 
 const AddressZero = "0x0000000000000000000000000000000000000000";
 const AddressNormal = "0xcD958D25697A04B0e55BF13c5ADE051beE046354";
@@ -37,7 +46,7 @@ function toFundInput(
     return { start, end, startAssess, endAssess, docHash, amount, title };
 }
 
-describe("Test of Commons Budget Contract", () => {
+describe.only("Test of Commons Budget Contract", () => {
     let contract: CommonsBudget;
     let storageContract: CommonsStorage;
     let voteraVote: VoteraVote;
@@ -55,7 +64,8 @@ describe("Test of Commons Budget Contract", () => {
     const commonsFund = BigNumber.from(10).pow(18).mul(1000000);
     const adminSigner = provider.getSigner(admin.address);
 
-    let proposal: string;
+    let proposalID: string;
+    const proposer: Wallet = validators[0];
 
     let wrongSigner: Wallet;
 
@@ -76,42 +86,18 @@ describe("Test of Commons Budget Contract", () => {
         const voteAddress = voteraVote.address;
         const changeParamTx = await contract.changeVoteParam(voteManager.address, voteAddress);
         await changeParamTx.wait();
+
+        // set information about network, contract, and validators in helper module
+        await setEnvironment(provider, contract, voteraVote, admin, voteManager, validators);
     });
 
     beforeEach(() => {
-        proposal = `0x${crypto.randomBytes(32).toString("hex")}`;
+        proposalID = `0x${crypto.randomBytes(32).toString("hex")}`;
     });
 
     it("Not Enough Commons Budget Fund", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
-
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await expect(
-            validatorBudget.createFundProposal(
-                proposal,
-                toFundInput(title, startTime, endTime, startAssess, endAssess, DocHash, fundAmount),
-                signProposal,
-                { value: basicFee }
-            )
+            createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount)
         ).to.be.revertedWith("NotEnoughBudget");
     });
 
@@ -208,18 +194,18 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposalID, title, startTime, endTime, docHash);
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createSystemProposal(
-            proposal,
+            proposalID,
             toSystemInput(title, startTime, endTime, docHash),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "CREATED state").equal(1); // CREATED state
         expect(proposalData.proposalType, "SYSTEM type").equal(0); // SYSTEM type
         expect(proposalData.title).equal("SystemProposalTitle");
@@ -230,14 +216,14 @@ describe("Test of Commons Budget Contract", () => {
         expect(proposalData.proposer).equal(validators[0].address);
         expect(proposalData.validatorSize).equal(BigNumber.from(0));
 
-        expect(await contract.getProposalValues(proposal)).equal(basicFee);
+        expect(await contract.getProposalValues(proposalID)).equal(basicFee);
 
         // make sure proposal is initialized in voteraVote
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const { voteAddress } = await voteBudget.getProposalData(proposal);
+        const { voteAddress } = await voteBudget.getProposalData(proposalID);
         expect(voteAddress).equal(voteraVote.address);
 
-        const voteInfo = await voteraVote.voteInfos(proposal);
+        const voteInfo = await voteraVote.voteInfos(proposalID);
         expect(voteInfo.commonsBudgetAddress).equal(contract.address);
     });
 
@@ -247,13 +233,13 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposalID, title, startTime, endTime, docHash);
 
         // call without fee
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await expect(
             validatorBudget.createSystemProposal(
-                proposal,
+                proposalID,
                 toSystemInput(title, startTime, endTime, docHash),
                 signProposal
             )
@@ -266,13 +252,13 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposalID, title, startTime, endTime, docHash);
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const wrongStartTime = 0;
         await expect(
             validatorBudget.createSystemProposal(
-                proposal,
+                proposalID,
                 toSystemInput(title, wrongStartTime, endTime, docHash),
                 signProposal,
                 { value: basicFee }
@@ -281,7 +267,7 @@ describe("Test of Commons Budget Contract", () => {
         const wrongEndTime = startTime - 100;
         await expect(
             validatorBudget.createSystemProposal(
-                proposal,
+                proposalID,
                 toSystemInput(title, startTime, wrongEndTime, docHash),
                 signProposal,
                 { value: basicFee }
@@ -290,29 +276,11 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     it("createSystemProposal: AlreadyExistProposal", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "SystemProposalTitle";
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
-
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        await validatorBudget.createSystemProposal(
-            proposal,
-            toSystemInput(title, startTime, endTime, docHash),
-            signProposal,
-            { value: basicFee }
-        );
+        await createSystemProposal(proposalID, proposer, DocHash, basicFee);
 
         // call again with same proposal
         await expect(
-            validatorBudget.createSystemProposal(
-                proposal,
-                toSystemInput(title, startTime, endTime, docHash),
-                signProposal,
-                { value: basicFee }
-            )
+            createSystemProposal(proposalID, proposer, DocHash, basicFee)
         ).to.be.revertedWith("AlreadyExistProposal");
     });
 
@@ -326,13 +294,13 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposalID, title, startTime, endTime, docHash);
 
         // call createSystemProposal without initializing changeVoteParam of contract
         const validatorBudget = CommonsBudgetFactory.connect(newContract.address, validators[0]);
         await expect(
             validatorBudget.createSystemProposal(
-                proposal,
+                proposalID,
                 toSystemInput(title, startTime, endTime, docHash),
                 signProposal,
                 { value: basicFee }
@@ -346,14 +314,14 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposalID, title, startTime, endTime, docHash);
 
         const wrongTitle = "WrongProposalTitle";
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await expect(
             validatorBudget.createSystemProposal(
-                proposal,
+                proposalID,
                 toSystemInput(wrongTitle, startTime, endTime, docHash),
                 signProposal,
                 { value: basicFee }
@@ -361,10 +329,10 @@ describe("Test of Commons Budget Contract", () => {
         ).to.be.revertedWith("InvalidInput");
 
         wrongSigner = admin;
-        const wrongSignProposal = await signSystemProposal(wrongSigner, proposal, title, startTime, endTime, docHash);
+        const wrongSignProposal = await signSystemProposal(wrongSigner, proposalID, title, startTime, endTime, docHash);
         await expect(
             validatorBudget.createSystemProposal(
-                proposal,
+                proposalID,
                 toSystemInput(title, startTime, endTime, docHash),
                 wrongSignProposal,
                 { value: basicFee }
@@ -380,10 +348,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -391,19 +358,19 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "CREATE state").equal(1); // CREATE state
         expect(proposalData.proposalType, "FUND type").equal(1); // FUND type
         expect(proposalData.title).equal("FundProposalTitle");
@@ -411,18 +378,18 @@ describe("Test of Commons Budget Contract", () => {
         expect(proposalData.end).equal(endTime);
         expect(proposalData.docHash).equal(docHash);
         expect(proposalData.fundAmount).equal(fundAmount);
-        expect(proposalData.proposer).equal(proposer);
+        expect(proposalData.proposer).equal(proposer.address);
         expect(proposalData.validatorSize).equal(BigNumber.from(0));
 
-        expect(await contract.getProposalValues(proposal)).equal(basicFee);
+        expect(await contract.getProposalValues(proposalID)).equal(basicFee);
 
         // make sure proposal is initialized in voteraVote
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
 
-        const { voteAddress } = await voteBudget.getProposalData(proposal);
+        const { voteAddress } = await voteBudget.getProposalData(proposalID);
         expect(voteAddress).equal(voteraVote.address);
 
-        const voteInfo = await voteraVote.voteInfos(proposal);
+        const voteInfo = await voteraVote.voteInfos(proposalID);
         expect(voteInfo.commonsBudgetAddress).equal(contract.address);
     });
 
@@ -434,10 +401,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -445,14 +411,14 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         // call without fee
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
                 signProposal
             )
@@ -467,13 +433,12 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const feePermil = await storageContract.fund_proposal_fee_permil();
         const wantedFee = fundAmount.mul(feePermil).div(1000);
         const wrongFee = wantedFee.div(2);
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -481,14 +446,14 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         // call without fee
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
                 signProposal,
                 { value: wrongFee }
@@ -507,7 +472,7 @@ describe("Test of Commons Budget Contract", () => {
         const wrongProposer = validators[1].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -521,7 +486,7 @@ describe("Test of Commons Budget Contract", () => {
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
                 signProposal,
                 { value: basicFee }
@@ -537,13 +502,12 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const wrongStartTime = 0;
         const signWrongStartTime = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             wrongStartTime,
             endTime,
@@ -551,11 +515,11 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(title, wrongStartTime, endTime, startAssess, endAssess, docHash, fundAmount),
                 signWrongStartTime,
                 { value: basicFee }
@@ -564,7 +528,7 @@ describe("Test of Commons Budget Contract", () => {
         const wrongEndTime = startTime - 100;
         const signWrongEndTime = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             wrongEndTime,
@@ -572,11 +536,11 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(title, startTime, wrongEndTime, startAssess, endAssess, docHash, fundAmount),
                 signWrongEndTime,
                 { value: basicFee }
@@ -585,43 +549,11 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     it("createFundProposal: AlreadyExistProposal", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
-
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        await validatorBudget.createFundProposal(
-            proposal,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
 
         // call again with same proposal
         await expect(
-            validatorBudget.createFundProposal(
-                proposal,
-                toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-                signProposal,
-                { value: basicFee }
-            )
+            createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount)
         ).to.be.revertedWith("AlreadyExistProposal");
     });
 
@@ -647,7 +579,7 @@ describe("Test of Commons Budget Contract", () => {
         const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -663,7 +595,7 @@ describe("Test of Commons Budget Contract", () => {
         const validatorBudget = CommonsBudgetFactory.connect(newContract.address, validators[0]);
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
                 signProposal,
                 { value: basicFee }
@@ -679,10 +611,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -690,7 +621,7 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const wrongTitle = "WrongProposalTitle";
@@ -698,7 +629,7 @@ describe("Test of Commons Budget Contract", () => {
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(wrongTitle, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
                 signProposal,
                 { value: basicFee }
@@ -708,7 +639,7 @@ describe("Test of Commons Budget Contract", () => {
         wrongSigner = admin;
         const wrongSignProposal = await signFundProposal(
             wrongSigner,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -716,11 +647,11 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
         await expect(
             validatorBudget.createFundProposal(
-                proposal,
+                proposalID,
                 toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
                 wrongSignProposal,
                 { value: basicFee }
@@ -729,14 +660,14 @@ describe("Test of Commons Budget Contract", () => {
     });
 
     const recordVote = async (voteAddress: string, countVote: boolean, passAssess?: boolean): Promise<number[]> => {
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         const startTime = proposalData.start;
         const endTime = proposalData.end;
         const openTime = endTime.add(30);
 
-        await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
+        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
-            proposal,
+            proposalID,
             validators.map((v) => v.address),
             true
         );
@@ -745,14 +676,14 @@ describe("Test of Commons Budget Contract", () => {
             const assessResult = passAssess ? passAssessResult : rejectedAssessResult;
             for (let i = 0; i < assessCount; i += 1) {
                 const assessVote = VoteraVoteFactory.connect(voteAddress, validators[i]);
-                await assessVote.submitAssess(proposal, assessResult);
+                await assessVote.submitAssess(proposalID, assessResult);
             }
 
             // wait unit assessEnd
             await network.provider.send("evm_increaseTime", [15000]);
             await network.provider.send("evm_mine");
 
-            await voteraVote.countAssess(proposal);
+            await voteraVote.countAssess(proposalID);
 
             if (!passAssess) {
                 return [];
@@ -783,18 +714,18 @@ describe("Test of Commons Budget Contract", () => {
         for (let i = 0; i < voterCount; i += 1) {
             const commitment = await makeCommitment(
                 voteAddress,
-                proposal,
+                proposalID,
                 validators[i].address,
                 choices[i],
                 nonces[i]
             );
-            const signature = await signCommitment(voteManager, proposal, validators[i].address, commitment);
+            const signature = await signCommitment(voteManager, proposalID, validators[i].address, commitment);
 
             const ballotVote = VoteraVoteFactory.connect(voteAddress, validators[i]);
-            submitBallotTx = await ballotVote.submitBallot(proposal, commitment, signature);
+            submitBallotTx = await ballotVote.submitBallot(proposalID, commitment, signature);
         }
 
-        expect(await voteraVote.getBallotCount(proposal)).equal(voterCount);
+        expect(await voteraVote.getBallotCount(proposalID)).equal(voterCount);
 
         if (submitBallotTx) {
             await submitBallotTx.wait();
@@ -808,8 +739,8 @@ describe("Test of Commons Budget Contract", () => {
         await network.provider.send("evm_mine");
 
         for (let i = 0; i < voterCount; i += 1) {
-            const ballotAddr = await voteraVote.getBallotAt(proposal, i);
-            const ballot = await voteraVote.getBallot(proposal, ballotAddr);
+            const ballotAddr = await voteraVote.getBallotAt(proposalID, i);
+            const ballot = await voteraVote.getBallot(proposalID, ballotAddr);
             expect(ballot.key).equal(validators[i].address);
         }
 
@@ -818,91 +749,31 @@ describe("Test of Commons Budget Contract", () => {
         await network.provider.send("evm_mine");
 
         await voteraVote.revealBallot(
-            proposal,
+            proposalID,
             validators.slice(0, voterCount).map((v) => v.address),
             choices,
             nonces
         );
-        await voteraVote.countVote(proposal);
+        await voteraVote.countVote(proposalID);
 
         return expectVoteCounts;
     };
 
     it("assessProposal: accepted", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
+        await assessProposal(proposalID, true);
 
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
-
-        const { voteAddress } = await contract.getProposalData(proposal);
-        const expectVoteCounts = await recordVote(voteAddress, false, true);
-
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "ACCEPTED state").equal(3); // ACCEPTED
         expect(proposalData.assessParticipantSize).equal(BigNumber.from(assessCount));
         expect(proposalData.assessData).eql(passAssessResult.map((v) => BigNumber.from(v * assessCount)));
     });
 
     it("assessProposal: rejected by score - total averge 7", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
+        await assessProposal(proposalID, false);
 
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
-
-        const { voteAddress } = await contract.getProposalData(proposal);
-        const expectVoteCounts = await recordVote(voteAddress, false, false);
-
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "REJECTED state").equal(2); // REJECTED
         expect(proposalData.assessParticipantSize).equal(BigNumber.from(assessCount));
         expect(proposalData.assessData).eql(rejectedAssessResult.map((v) => BigNumber.from(v * assessCount)));
@@ -916,10 +787,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -927,40 +797,40 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
 
-        const { voteAddress } = await contract.getProposalData(proposal);
+        const { voteAddress } = await contract.getProposalData(proposalID);
 
         const openTime = endTime + 30;
 
-        await voteraVote.setupVoteInfo(proposal, startTime, endTime, openTime, "info");
+        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, openTime, "info");
         await voteraVote.addValidators(
-            proposal,
+            proposalID,
             validators.map((v) => v.address),
             true
         );
 
         for (let i = 0; i < validators.length; i += 1) {
             const assessVote = VoteraVoteFactory.connect(voteAddress, validators[i]);
-            await assessVote.submitAssess(proposal, [10, 10, 4, 10, 10]);
+            await assessVote.submitAssess(proposalID, [10, 10, 4, 10, 10]);
         }
 
         // wait until startTime
         await network.provider.send("evm_increaseTime", [15000]);
         await network.provider.send("evm_mine");
 
-        await voteraVote.countAssess(proposal);
+        await voteraVote.countAssess(proposalID);
 
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "REJECTED state").equal(2); // REJECTED
     });
 
@@ -972,10 +842,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -983,21 +852,21 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        await voteraVote.setupVoteInfo(proposal, startTime, endTime, endTime + 30, "info");
+        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, endTime + 30, "info");
         await voteraVote.addValidators(
-            proposal,
+            proposalID,
             validators.map((v) => v.address),
             true
         );
@@ -1006,9 +875,9 @@ describe("Test of Commons Budget Contract", () => {
         await network.provider.send("evm_increaseTime", [15000]);
         await network.provider.send("evm_mine");
 
-        await voteraVote.countAssess(proposal);
+        await voteraVote.countAssess(proposalID);
 
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "REJECTED state").equal(2); // REJECTED
         expect(proposalData.assessParticipantSize).equal(0);
         expect(proposalData.assessData).eql(Array(5).fill(BigNumber.from(0)));
@@ -1020,148 +889,48 @@ describe("Test of Commons Budget Contract", () => {
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         await expect(
-            voteBudget.assessProposal(proposal, assessParticipantSize, assessParticipantSize, assessResult)
+            voteBudget.assessProposal(proposalID, assessParticipantSize, assessParticipantSize, assessResult)
         ).to.be.revertedWith("NotFoundProposal");
     });
 
     it("assessProposal: InvalidProposal - System proposal", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "SystemProposalTitle";
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
-
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        await validatorBudget.createSystemProposal(
-            proposal,
-            toSystemInput(title, startTime, endTime, docHash),
-            signProposal,
-            { value: basicFee }
-        );
+        await createSystemProposal(proposalID, proposer, DocHash, basicFee);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
+        await expect(voteBudget.assessProposal(proposalID, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "InvalidProposal"
         );
     });
 
     it("assessProposal: AlreadyFinishedAssessment - FINISHED", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
+        await assessProposal(proposalID, true);
 
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
-
-        const { voteAddress } = await contract.getProposalData(proposal);
-        const expectVoteCounts = await recordVote(voteAddress, true, true);
+        // Vote counting finished with approval
+        await countVoteResult(proposalID, true);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
+        await expect(voteBudget.assessProposal(proposalID, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "AlreadyFinishedAssessment"
         );
     });
 
     it("assessProposal: AlreadyFinishedAssessment - REJECTED", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
-
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
-
-        const { voteAddress } = await contract.getProposalData(proposal);
-        const expectVoteCounts = await recordVote(voteAddress, false, false);
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
+        await assessProposal(proposalID, false);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
+        await expect(voteBudget.assessProposal(proposalID, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "AlreadyFinishedAssessment"
         );
     });
 
     it("assessProposal: AlreadyFinishedAssessment - ACCEPTED", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
-
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
-
-        const { voteAddress } = await contract.getProposalData(proposal);
-        const expectVoteCounts = await recordVote(voteAddress, false, true);
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
+        await assessProposal(proposalID, true);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
+        await expect(voteBudget.assessProposal(proposalID, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "AlreadyFinishedAssessment"
         );
     });
@@ -1174,10 +943,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -1185,81 +953,54 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        await voteraVote.setupVoteInfo(proposal, startTime, endTime, endTime + 30, "info");
+        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, endTime + 30, "info");
         await voteraVote.addValidators(
-            proposal,
+            proposalID,
             validators.map((v) => v.address),
             true
         );
 
-        const { voteAddress } = await contract.getProposalData(proposal);
+        const { voteAddress } = await contract.getProposalData(proposalID);
 
         const assessResult = [10, 10, 10, 10, 10];
         for (let i = 0; i < assessCount; i += 1) {
             const assessVote = VoteraVoteFactory.connect(voteAddress, validators[i]);
-            await assessVote.submitAssess(proposal, assessResult);
+            await assessVote.submitAssess(proposalID, assessResult);
         }
 
         // wait until startTime
         await network.provider.send("evm_increaseTime", [30000]);
         await network.provider.send("evm_mine");
 
-        await expect(voteraVote.countAssess(proposal)).to.be.revertedWith("TooLate");
+        await expect(voteraVote.countAssess(proposalID)).to.be.revertedWith("TooLate");
     });
 
     it("assessProposal: NotAuthorized", async () => {
-        const blockLatest = await ethers.provider.getBlock("latest");
-        const title = "FundProposalTitle";
-        const startAssess = blockLatest.timestamp;
-        const endAssess = startAssess + 15000;
-        const startTime = blockLatest.timestamp + 30000;
-        const endTime = startTime + 30000;
-        const docHash = DocHash;
-        const proposer = validators[0].address;
-        const signProposal = await signFundProposal(
-            voteManager,
-            proposal,
-            title,
-            startTime,
-            endTime,
-            startAssess,
-            endAssess,
-            docHash,
-            fundAmount,
-            proposer
-        );
-
-        const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
-        const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
-            toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
-            signProposal,
-            { value: basicFee }
-        );
-        await makeProposalTx.wait();
+        const proposerBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
 
         // wait unit assessEnd
         await network.provider.send("evm_increaseTime", [15000]);
         await network.provider.send("evm_mine");
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        await expect(voteBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
+        await expect(voteBudget.assessProposal(proposalID, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "NotAuthorized"
         );
-        await expect(contract.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith("NotAuthorized");
-        await expect(validatorBudget.assessProposal(proposal, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
+        await expect(contract.assessProposal(proposalID, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith("NotAuthorized");
+        await expect(proposerBudget.assessProposal(proposalID, 1, 1, [10, 10, 10, 10, 10])).to.be.revertedWith(
             "NotAuthorized"
         );
     });
@@ -1270,11 +1011,11 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const signProposal = await signSystemProposal(voteManager, proposal, title, startTime, endTime, docHash);
+        const signProposal = await signSystemProposal(voteManager, proposalID, title, startTime, endTime, docHash);
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createSystemProposal(
-            proposal,
+            proposalID,
             toSystemInput(title, startTime, endTime, docHash),
             signProposal,
             { value: basicFee }
@@ -1282,11 +1023,11 @@ describe("Test of Commons Budget Contract", () => {
         await makeProposalTx.wait();
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const { voteAddress } = await voteBudget.getProposalData(proposal);
+        const { voteAddress } = await voteBudget.getProposalData(proposalID);
 
         const expectedCounts = await recordVote(voteAddress, true, undefined);
 
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "FINISHED state").equal(4); // FINISHED
         expect(proposalData.validatorSize).equal(BigNumber.from(validators.length));
         expect(proposalData.voteResult).to.eql(expectedCounts.map((v) => BigNumber.from(v)));
@@ -1300,10 +1041,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -1311,12 +1051,12 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
@@ -1324,11 +1064,11 @@ describe("Test of Commons Budget Contract", () => {
         await makeProposalTx.wait();
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
-        const { voteAddress } = await voteBudget.getProposalData(proposal);
+        const { voteAddress } = await voteBudget.getProposalData(proposalID);
 
         const expectedCounts = await recordVote(voteAddress, true, true);
 
-        const proposalData = await contract.getProposalData(proposal);
+        const proposalData = await contract.getProposalData(proposalID);
         expect(proposalData.state, "FINISHED state").equal(4); // FINISHED
         expect(proposalData.validatorSize).equal(BigNumber.from(validators.length));
         expect(proposalData.voteResult).to.eql(expectedCounts.map((v) => BigNumber.from(v)));
@@ -1337,7 +1077,7 @@ describe("Test of Commons Budget Contract", () => {
     it("finishVote: NotFoundProposal", async () => {
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         const validatorCount = 9;
-        await expect(voteBudget.finishVote(proposal, validatorCount, [3, 3, 3])).to.be.revertedWith("NotFoundProposal");
+        await expect(voteBudget.finishVote(proposalID, validatorCount, [3, 3, 3])).to.be.revertedWith("NotFoundProposal");
     });
 
     it("finishVote: AlreadyFinishedProposal", async () => {
@@ -1348,10 +1088,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -1359,23 +1098,23 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        const { voteAddress } = await contract.getProposalData(proposal);
+        const { voteAddress } = await contract.getProposalData(proposalID);
         const expectVoteCounts = await recordVote(voteAddress, true, true);
 
-        const validatorCount = await voteraVote.getValidatorCount(proposal);
-        const voteResult = await voteraVote.getVoteResult(proposal);
+        const validatorCount = await voteraVote.getValidatorCount(proposalID);
+        const voteResult = await voteraVote.getVoteResult(proposalID);
 
         for (let i = 0; i < 3; i += 1) {
             expect(voteResult[i]).equal(BigNumber.from(expectVoteCounts[i]));
@@ -1383,7 +1122,7 @@ describe("Test of Commons Budget Contract", () => {
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         await expect(
-            voteBudget.finishVote(proposal, validatorCount, [voteResult[0], voteResult[1], voteResult[2]])
+            voteBudget.finishVote(proposalID, validatorCount, [voteResult[0], voteResult[1], voteResult[2]])
         ).to.be.revertedWith("AlreadyFinishedProposal");
     });
 
@@ -1395,10 +1134,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -1406,25 +1144,25 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        const { voteAddress } = await contract.getProposalData(proposal);
+        const { voteAddress } = await contract.getProposalData(proposalID);
         await recordVote(voteAddress, true, false);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
 
         const validatorCount = 9;
-        await expect(voteBudget.finishVote(proposal, validatorCount, [3, 3, 3])).to.be.revertedWith("RejectedProposal");
+        await expect(voteBudget.finishVote(proposalID, validatorCount, [3, 3, 3])).to.be.revertedWith("RejectedProposal");
     });
 
     it("finishVote: NoAssessment", async () => {
@@ -1435,10 +1173,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -1446,12 +1183,12 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
@@ -1461,7 +1198,7 @@ describe("Test of Commons Budget Contract", () => {
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
 
         const validatorCount = 9;
-        await expect(voteBudget.finishVote(proposal, validatorCount, [3, 3, 3])).to.be.revertedWith("NoAssessment");
+        await expect(voteBudget.finishVote(proposalID, validatorCount, [3, 3, 3])).to.be.revertedWith("NoAssessment");
     });
 
     it("finishVote: NotEndProposal", async () => {
@@ -1472,10 +1209,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -1483,24 +1219,24 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        const { voteAddress } = await contract.getProposalData(proposal);
+        const { voteAddress } = await contract.getProposalData(proposalID);
         await recordVote(voteAddress, false, true);
 
         const voteBudget = CommonsBudgetFactory.connect(contract.address, voteManager);
         const validatorCount = 9;
-        await expect(voteBudget.finishVote(proposal, validatorCount, [3, 3, 3])).to.be.revertedWith("NotEndProposal");
+        await expect(voteBudget.finishVote(proposalID, validatorCount, [3, 3, 3])).to.be.revertedWith("NotEndProposal");
     });
 
     it("finishVote: NotAuthorized", async () => {
@@ -1511,10 +1247,9 @@ describe("Test of Commons Budget Contract", () => {
         const startTime = blockLatest.timestamp + 30000;
         const endTime = startTime + 30000;
         const docHash = DocHash;
-        const proposer = validators[0].address;
         const signProposal = await signFundProposal(
             voteManager,
-            proposal,
+            proposalID,
             title,
             startTime,
             endTime,
@@ -1522,19 +1257,19 @@ describe("Test of Commons Budget Contract", () => {
             endAssess,
             docHash,
             fundAmount,
-            proposer
+            proposer.address
         );
 
         const validatorBudget = CommonsBudgetFactory.connect(contract.address, validators[0]);
         const makeProposalTx = await validatorBudget.createFundProposal(
-            proposal,
+            proposalID,
             toFundInput(title, startTime, endTime, startAssess, endAssess, docHash, fundAmount),
             signProposal,
             { value: basicFee }
         );
         await makeProposalTx.wait();
 
-        const { voteAddress } = await contract.getProposalData(proposal);
+        const { voteAddress } = await contract.getProposalData(proposalID);
         const expectVoteCounts = await recordVote(voteAddress, false, true);
 
         // wait for endTime
@@ -1545,17 +1280,17 @@ describe("Test of Commons Budget Contract", () => {
         await network.provider.send("evm_increaseTime", [30]);
         await network.provider.send("evm_mine");
 
-        const validatorCount = await voteraVote.getValidatorCount(proposal);
+        const validatorCount = await voteraVote.getValidatorCount(proposalID);
 
         await expect(
-            contract.finishVote(proposal, validatorCount, [
+            contract.finishVote(proposalID, validatorCount, [
                 expectVoteCounts[0],
                 expectVoteCounts[1],
                 expectVoteCounts[2],
             ])
         ).to.be.revertedWith("NotAuthorized");
         await expect(
-            validatorBudget.finishVote(proposal, validatorCount, [
+            validatorBudget.finishVote(proposalID, validatorCount, [
                 expectVoteCounts[0],
                 expectVoteCounts[1],
                 expectVoteCounts[2],

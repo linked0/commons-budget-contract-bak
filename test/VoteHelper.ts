@@ -186,7 +186,7 @@ export async function createFundProposal(
     await makeProposalTx.wait();
 }
 
-export async function assessProposal(proposalID: string, assessResult: boolean) {
+export async function assessProposal(proposalID: string, assessResult: boolean, assessData?: number[]) {
     const proposalData = await commonsBudget.getProposalData(proposalID);
     const startTime = proposalData.start;
     const endTime = proposalData.end;
@@ -211,12 +211,19 @@ export async function assessProposal(proposalID: string, assessResult: boolean) 
 
     let assessCount: number;
     let passAssessResult: number[] = [];
-    if (assessResult) {
+    if (assessData !== undefined)
+    {
         assessCount = 2;
-        passAssessResult = [7, 7, 7, 7, 7];
-    } else {
-        assessCount = 2;
-        passAssessResult = [6, 6, 6, 6, 6];
+        passAssessResult = assessData;
+    }
+    else {
+        if (assessResult) {
+            assessCount = 2;
+            passAssessResult = [7, 7, 7, 7, 7];
+        } else {
+            assessCount = 2;
+            passAssessResult = [6, 6, 6, 6, 6];
+        }
     }
 
     // Fund proposal
