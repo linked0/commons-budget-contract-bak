@@ -119,7 +119,7 @@ describe("Test actions by contract owner", () => {
 
         // create more validators and have 108 validators in total
         let manyValidators: Wallet[] = validators;
-        const addCount = (await storageContract.vote_fee_distrib_count()).toNumber();
+        const addCount = (await storageContract.voteFeeDistribCount()).toNumber();
         for (let i = 0; i < addCount; i += 1) {
             manyValidators = manyValidators.concat(provider.createEmptyWallet());
         }
@@ -156,8 +156,8 @@ describe("Test actions by contract owner", () => {
         }
 
         // distribute vote fess to validators
-        const maxCountDist = (await storageContract.vote_fee_distrib_count()).toNumber();
-        // const maxCountDist = (await contract.connect(adminSigner).vote_fee_distrib_count()).toNumber();
+        const maxCountDist = (await storageContract.voteFeeDistribCount()).toNumber();
+        // const maxCountDist = (await contract.connect(adminSigner).voteFeeDistribCount()).toNumber();
         const distCallCount = valAddresses.length / maxCountDist;
         for (let i = 0; i < distCallCount; i += 1) {
             const start = i * maxCountDist;
@@ -167,7 +167,7 @@ describe("Test actions by contract owner", () => {
 
         // compares voters' balances with previous balances
         // the specified fee should be added to all the voters' balances
-        const voterFee = await storageContract.voter_fee();
+        const voterFee = await storageContract.voterFee();
         await network.provider.send("evm_mine");
         for (const address of valAddresses) {
             const curBalance = await provider.getBalance(address);

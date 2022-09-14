@@ -201,7 +201,7 @@ export async function assessProposal(proposalID: string, assessResult: boolean) 
 
     // distribute vote fess to validators
     const adminSigner = provider.getSigner(admin.address);
-    const maxCountDist = (await commonsStorage.vote_fee_distrib_count()).toNumber();
+    const maxCountDist = (await commonsStorage.voteFeeDistribCount()).toNumber();
     const distCallCount = validators.length / maxCountDist;
     for (let i = 0; i < distCallCount; i += 1) {
         const start = i * maxCountDist;

@@ -141,7 +141,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         ProposalInput calldata _proposalInput,
         bytes calldata _signature
     ) external payable override onlyInvalidProposal(_proposalID) {
-        require(msg.value >= storageContract.system_proposal_fee(), "InvalidFee");
+        require(msg.value >= storageContract.systemProposalFee(), "InvalidFee");
         storageContract.createSystemProposal(_proposalID, msg.sender, _proposalInput, _signature);
         initVote(
             _proposalID,
@@ -165,7 +165,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         ProposalInput calldata _proposalInput,
         bytes calldata _signature
     ) external payable override onlyInvalidProposal(_proposalID) {
-        uint256 _appropriateFee = (_proposalInput.amount * storageContract.fund_proposal_fee_permil()) / 1000;
+        uint256 _appropriateFee = (_proposalInput.amount * storageContract.fundProposalFeePermil()) / 1000;
         require(msg.value >= _appropriateFee, "InvalidFee");
         require(address(this).balance >= _proposalInput.amount, "NotEnoughBudget");
         storageContract.createFundProposal(_proposalID, msg.sender, _proposalInput, _signature);
@@ -252,11 +252,11 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         IVoteraVote voteraVote = IVoteraVote(proposalData.voteAddress);
         uint256 validatorLength = voteraVote.getValidatorCount(_proposalID);
         require(_start < validatorLength, "InvalidInput");
-        for (uint256 i = _start; i < validatorLength && i < _start + storageContract.vote_fee_distrib_count(); i++) {
+        for (uint256 i = _start; i < validatorLength && i < _start + storageContract.voteFeeDistribCount(); i++) {
             address validator = voteraVote.getValidatorAt(_proposalID, i);
             if (!feeMaps[_proposalID].voteFeePaid[validator]) {
                 feeMaps[_proposalID].voteFeePaid[validator] = true;
-                payable(validator).transfer(storageContract.voter_fee());
+                payable(validator).transfer(storageContract.voterFee());
             }
         }
     }
