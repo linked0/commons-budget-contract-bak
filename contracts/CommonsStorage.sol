@@ -255,7 +255,9 @@ contract CommonsStorage is ICommonsStorage {
     }
 
     function setFundingAllowed(bytes32 _proposalID, bool allow) external onlyCommonsBudget {
-        require(block.timestamp - proposalMaps[_proposalID].countingFinishTime < 86400, "InvalidTime");
+        require(proposalMaps[_proposalID].fundWithdrawn == false, "W09");
+        require(allow == true || block.timestamp - proposalMaps[_proposalID].countingFinishTime < 86400, "InvalidTime");
+
         proposalMaps[_proposalID].fundingAllowed = allow;
     }
 

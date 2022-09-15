@@ -246,7 +246,7 @@ describe("Test of Fund Withdrawal", () => {
         // allow funding
         await commonsBudget.allowFunding(proposalID);
 
-        // 6 hours passed
+        // 6 hours passed(= 24 hours passed after vote counting)
         await network.provider.send("evm_increaseTime", [21600]);
         await network.provider.send("evm_mine");
 
@@ -254,10 +254,51 @@ describe("Test of Fund Withdrawal", () => {
         const [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
         expect(stateCode).equals("W00");
 
+        // 6 hours passed
+        await network.provider.send("evm_increaseTime", [21600]);
+        await network.provider.send("evm_mine");
+
+        // refuse funding after 24 hours passed
+        await expect(commonsBudget.refuseFunding(proposalID)).to.be.revertedWith("InvalidTime");
+
         // succeed to withdraw
         await expect(proposerBudget.withdraw(proposalID)).to.emit(proposerBudget, "FundTransfer").withArgs(proposalID);
 
-        // refuse funding after allowed time passed
-        await expect(commonsBudget.refuseFunding(proposalID)).to.be.revertedWith("InvalidTime");
+        // refuse funding after withdrawn
+        await expect(commonsBudget.refuseFunding(proposalID)).to.be.revertedWith("W09");
+    });
+
+    it("Withdrawal: Owner can allow funding anytime after refusing", async () => {
+        const proposerBudget = CommonsBudgetFactory.connect(commonsBudget.address, validators[0]);
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
+        await assessProposal(proposalID, true);
+
+        // Vote counting finished with approval
+        await countVoteResult(proposalID, true);
+
+        // 12 hours passed
+        await network.provider.send("evm_increaseTime", [43200]);
+        await network.provider.send("evm_mine");
+
+        // refuse funding
+        await commonsBudget.refuseFunding(proposalID);
+
+        // 12 hours passed
+        await network.provider.send("evm_increaseTime", [43200]);
+        await network.provider.send("evm_mine");
+
+        // check status of W08: The fund can NOT be withdrawn
+        const [stateCode, _] = await proposerBudget.checkWithdrawState(proposalID);
+        expect(stateCode).equals("W08");
+
+        // 48 hours passed
+        await network.provider.send("evm_increaseTime", [172800]);
+        await network.provider.send("evm_mine");
+
+        // Owner can allow funding any time
+        await commonsBudget.allowFunding(proposalID);
+
+        // succeed to withdraw
+        await expect(proposerBudget.withdraw(proposalID)).to.emit(proposerBudget, "FundTransfer").withArgs(proposalID);
     });
 });
