@@ -3,6 +3,10 @@
 pragma solidity ^0.8.0;
 
 interface ICommonsBudget {
+    // @notice This event is emitted when a funds transfer occurs
+    // @param proposalID id of proposal
+    event FundTransfer(bytes32 proposalID);
+
     enum ProposalStates {
         INVALID, // Not exist data
         CREATED, // Created

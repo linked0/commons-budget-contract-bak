@@ -30,10 +30,6 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     mapping(bytes32 => ICommonsBudget.ProposalFeeData) internal feeMaps;
 
-    // @notice This event is emitted when a funds transfer occurs
-    // @param proposalID id of proposal
-    event FundTransfer(bytes32 proposalID);
-
     receive() external payable {
         emit Received(msg.sender, msg.value);
     }
