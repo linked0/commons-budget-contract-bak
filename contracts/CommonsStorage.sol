@@ -188,7 +188,7 @@ contract CommonsStorage is ICommonsStorage {
         uint256 _validatorSize,
         uint256 _assessParticipantSize,
         uint64[] calldata _assessData
-    ) external onlyCommonsBudget {
+    ) external onlyCommonsBudget returns (bool) {
         proposalMaps[_proposalID].validatorSize = _validatorSize;
         proposalMaps[_proposalID].assessParticipantSize = _assessParticipantSize;
         proposalMaps[_proposalID].assessData = _assessData;
@@ -199,7 +199,7 @@ contract CommonsStorage is ICommonsStorage {
             for (uint256 j = 0; j < _assessData.length; j++) {
                 if (_assessData[j] < minPass) {
                     proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
-                    return;
+                    return false;
                 }
                 sum += _assessData[j];
             }
@@ -207,12 +207,14 @@ contract CommonsStorage is ICommonsStorage {
             minPass = _assessData.length * 7 * _assessParticipantSize;
             if (sum < minPass) {
                 proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
-                return;
+                return false;
             }
 
             proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.ACCEPTED;
+            return true;
         } else {
             proposalMaps[_proposalID].state = ICommonsBudget.ProposalStates.REJECTED;
+            return false;
         }
     }
 
@@ -220,7 +222,7 @@ contract CommonsStorage is ICommonsStorage {
         bytes32 _proposalID,
         uint256 _validatorSize,
         uint64[] calldata _voteResult
-    ) external onlyCommonsBudget {
+    ) external onlyCommonsBudget returns (bool) {
         address _voteAddress = proposalMaps[_proposalID].voteAddress;
         IVoteraVote voteraVote = IVoteraVote(_voteAddress);
         require(voteManager == voteraVote.getManager(), "InvalidVote");
@@ -251,6 +253,13 @@ contract CommonsStorage is ICommonsStorage {
             proposalMaps[_proposalID].proposalResult = ICommonsBudget.ProposalResult.REJECTED;
         } else {
             proposalMaps[_proposalID].proposalResult = ICommonsBudget.ProposalResult.APPROVED;
+        }
+
+        if (proposalMaps[_proposalID].proposalResult == ICommonsBudget.ProposalResult.APPROVED) {
+            return true;
+        }
+        else {
+            return false;
         }
     }
 

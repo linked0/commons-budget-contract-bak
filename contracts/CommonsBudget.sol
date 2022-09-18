@@ -211,7 +211,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         onlyBeforeVoteStart(_proposalID)
         onlyVoteContract(_proposalID)
     {
-        storageContract.assessProposal(_proposalID, _validatorSize, _assessParticipantSize, _assessData);
+        bool assessResult = storageContract.assessProposal(_proposalID, _validatorSize, _assessParticipantSize, _assessData);
+        emit AssessmentFinish(_proposalID, assessResult);
     }
 
     /// @notice notify that vote is finished
@@ -230,7 +231,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         onlyEndProposal(_proposalID)
         onlyVoteContract(_proposalID)
     {
-        storageContract.finishVote(_proposalID, _validatorSize, _voteResult);
+        bool voteResult = storageContract.finishVote(_proposalID, _validatorSize, _voteResult);
+        emit VoteCountingFinish(_proposalID, voteResult);
     }
 
     /// @notice check if the distribution is available
@@ -283,12 +285,14 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @param _proposalID id of proposal
     function refuseFunding(bytes32 _proposalID) external override onlyOwner onlyApprovedFundProposal(_proposalID) {
         storageContract.setFundingAllowed(_proposalID, false);
+        emit FundWithdrawRefuse(_proposalID);
     }
 
     /// @notice allow funding for the proposal
     /// @param _proposalID id of proposal
     function allowFunding(bytes32 _proposalID) external override onlyOwner onlyApprovedFundProposal(_proposalID) {
         storageContract.setFundingAllowed(_proposalID, true);
+        emit FundWithdrawAllow(_proposalID);
     }
 
     /// @notice withdraw the funds of the proposal

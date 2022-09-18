@@ -7,6 +7,22 @@ interface ICommonsBudget {
     // @param proposalID id of proposal
     event FundTransfer(bytes32 proposalID);
 
+    // @notice This event is emitted when a assessment is finished
+    // @param proposalID id of proposal
+    event AssessmentFinish(bytes32 proposalID, bool assessResult);
+
+    // @notice This event is emitted when a vote counting is finished
+    // @param proposalID id of proposal
+    event VoteCountingFinish(bytes32 proposalID, bool countingResult);
+
+    // @notice This event is emitted when funding is refused by the owner
+    // @param proposalID id of proposal
+    event FundWithdrawRefuse(bytes32 proposalID);
+
+    // @notice This event is emitted when funding is allowed by the owner
+    // @param proposalID id of proposal
+    event FundWithdrawAllow(bytes32 proposalID);
+
     enum ProposalStates {
         INVALID, // Not exist data
         CREATED, // Created

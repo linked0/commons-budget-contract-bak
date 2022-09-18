@@ -230,7 +230,7 @@ export async function assessProposal(proposalID: string, assessResult: boolean) 
         await network.provider.send("evm_increaseTime", [15000]);
         await network.provider.send("evm_mine");
 
-        await voteraVote.countAssess(proposalID);
+        await expect(voteraVote.countAssess(proposalID)).to.emit(commonsBudget, "AssessmentFinish").withArgs(proposalID, assessResult);
 
         // wait until startTime
         await network.provider.send("evm_increaseTime", [15000]);
@@ -329,7 +329,77 @@ export async function countVoteResult(proposalID: string, votingResult: boolean)
     } else {
         negative = validators.length;
     }
-    return countVote(proposalID, positive, negative, 0);
+    const voterCount = positive + negative;
+
+    // setup votes
+    const choices: number[] = [];
+    const nonces: number[] = [];
+    const expectVoteCounts: number[] = [0, 0, 0];
+
+    // set positive votes
+    for (let i = 0; i < positive; i += 1) {
+        choices.push(1);
+        nonces.push(i + 1);
+        expectVoteCounts[1] += 1;
+    }
+
+    // set negative votes
+    for (let i = positive; i < positive + negative; i += 1) {
+        choices.push(2);
+        nonces.push(i + 1);
+        expectVoteCounts[2] += 1;
+    }
+
+    // set blank (= abstention) votes
+    for (let i = positive + negative; i < voterCount; i += 1) {
+        choices.push(0);
+        nonces.push(i + 1);
+        expectVoteCounts[0] += 1;
+    }
+
+    let submitBallotTx;
+    for (let i = 0; i < voterCount; i += 1) {
+        const commitment = await makeCommitment(
+            voteraVote.address,
+            proposalID,
+            validators[i].address,
+            choices[i],
+            nonces[i]
+        );
+        const signature = await signCommitment(voteManager, proposalID, validators[i].address, commitment);
+
+        const ballotVote = VoteraVoteFactory.connect(voteraVote.address, validators[i]);
+        submitBallotTx = await ballotVote.submitBallot(proposalID, commitment, signature);
+    }
+
+    expect(await voteraVote.getBallotCount(proposalID)).equal(voterCount);
+
+    if (submitBallotTx) {
+        await submitBallotTx.wait();
+    }
+
+    await network.provider.send("evm_increaseTime", [30000]);
+    await network.provider.send("evm_mine");
+
+    for (let i = 0; i < voterCount; i += 1) {
+        const ballotAddr = await voteraVote.getBallotAt(proposalID, i);
+        const ballot = await voteraVote.getBallot(proposalID, ballotAddr);
+        expect(ballot.key).equal(validators[i].address);
+    }
+
+    // wait until openTime
+    await network.provider.send("evm_increaseTime", [30]);
+    await network.provider.send("evm_mine");
+
+    await voteraVote.revealBallot(
+        proposalID,
+        validators.slice(0, voterCount).map((v) => v.address),
+        choices,
+        nonces
+    );
+    await expect(voteraVote.countVote(proposalID)).to.emit(commonsBudget, "VoteCountingFinish").withArgs(proposalID, votingResult);
+
+    return expectVoteCounts;
 }
 
 export async function processVote(
