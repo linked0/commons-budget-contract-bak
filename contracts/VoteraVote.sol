@@ -216,7 +216,11 @@ contract VoteraVote is Ownable, IVoteraVote {
             voteInfos[_proposalID].state != VoteState.SETTING;
     }
 
-    function isContainAssess(bytes32 _proposalId, address _address) private view returns (bool) {
+    /// @notice check whether assessment is exist or not
+    /// @param _proposalId id of proposal
+    /// @param _address address of validator
+    /// @return returns true if found assessment, or false
+    function isContainAssess(bytes32 _proposalId, address _address) public view returns (bool) {
         return ballots[_proposalId].assessValues[_address].length != 0;
     }
 
