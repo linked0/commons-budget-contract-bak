@@ -63,6 +63,11 @@ interface ICommonsBudget {
         string title; // title of proposal
     }
 
+    /// @notice check if an address is the owner of the contract
+    /// @param account the address to be checked
+    /// @return return `true` if the `account` is owner
+    function isOwner(address account) external view returns (bool);
+
     /// @notice create system proposal
     /// @param proposalID id of proposal
     /// @param proposalInput input data of proposal

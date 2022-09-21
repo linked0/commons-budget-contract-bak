@@ -46,7 +46,8 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         return
             interfaceId == this.supportsInterface.selector ||
             interfaceId ==
-            this.createSystemProposal.selector ^
+            this.isOwner.selector ^
+                this.createSystemProposal.selector ^
                 this.createFundProposal.selector ^
                 this.assessProposal.selector ^
                 this.finishVote.selector ^
@@ -106,6 +107,13 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
         require(block.timestamp >= proposalData.end, "NotEndProposal");
         _;
+    }
+
+    /// @notice check if an address is the owner of the contract
+    /// @param account the address to be checked
+    /// @return return `true` if the `account` is owner
+    function isOwner(address account) external override view returns (bool) {
+        return owner() == account;
     }
 
     function getStorageContractAddress() external view returns (address contractAddress) {

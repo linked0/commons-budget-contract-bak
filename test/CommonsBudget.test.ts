@@ -61,7 +61,7 @@ describe("Test of Commons Budget Contract", () => {
 
     before(async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-        contract = await commonsBudgetFactory.deploy();
+        contract = await commonsBudgetFactory.connect(admin).deploy();
         await contract.deployed();
 
         const storageAddress = await contract.getStorageContractAddress();
@@ -80,6 +80,12 @@ describe("Test of Commons Budget Contract", () => {
 
     beforeEach(() => {
         proposal = `0x${crypto.randomBytes(32).toString("hex")}`;
+    });
+
+    it("isOwner", async () => {
+        expect(await contract.isOwner(admin.address)).equal(true);
+        expect(await contract.isOwner(voteManager.address)).equal(false);
+        expect(await contract.isOwner(validators[0].address)).equal(false);
     });
 
     it("Not Enough Commons Budget Fund", async () => {
