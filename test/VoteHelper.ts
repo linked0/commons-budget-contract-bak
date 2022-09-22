@@ -230,7 +230,9 @@ export async function assessProposal(proposalID: string, assessResult: boolean) 
         await network.provider.send("evm_increaseTime", [15000]);
         await network.provider.send("evm_mine");
 
-        await expect(voteraVote.countAssess(proposalID)).to.emit(commonsBudget, "AssessmentFinish").withArgs(proposalID, assessResult);
+        await expect(voteraVote.countAssess(proposalID))
+            .to.emit(commonsBudget, "AssessmentFinish")
+            .withArgs(proposalID, assessResult);
 
         // wait until startTime
         await network.provider.send("evm_increaseTime", [15000]);
@@ -397,7 +399,9 @@ export async function countVoteResult(proposalID: string, votingResult: boolean)
         choices,
         nonces
     );
-    await expect(voteraVote.countVote(proposalID)).to.emit(commonsBudget, "VoteCountingFinish").withArgs(proposalID, votingResult);
+    await expect(voteraVote.countVote(proposalID))
+        .to.emit(commonsBudget, "VoteCountingFinish")
+        .withArgs(proposalID, votingResult);
 
     return expectVoteCounts;
 }

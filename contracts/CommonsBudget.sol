@@ -108,7 +108,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @notice check if an address is the owner of the contract
     /// @param account the address to be checked
     /// @return return `true` if the `account` is owner
-    function isOwner(address account) external override view returns (bool) {
+    function isOwner(address account) external view override returns (bool) {
         return owner() == account;
     }
 
@@ -211,7 +211,12 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         onlyBeforeVoteStart(_proposalID)
         onlyVoteContract(_proposalID)
     {
-        bool assessResult = storageContract.assessProposal(_proposalID, _validatorSize, _assessParticipantSize, _assessData);
+        bool assessResult = storageContract.assessProposal(
+            _proposalID,
+            _validatorSize,
+            _assessParticipantSize,
+            _assessData
+        );
         emit AssessmentFinish(_proposalID, assessResult);
     }
 

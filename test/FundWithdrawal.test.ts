@@ -237,14 +237,18 @@ describe("Test of Fund Withdrawal", () => {
         await network.provider.send("evm_mine");
 
         // refuse funding
-        await expect(commonsBudget.refuseFunding(proposalID)).to.emit(proposerBudget, "FundWithdrawRefuse").withArgs(proposalID);
+        await expect(commonsBudget.refuseFunding(proposalID))
+            .to.emit(proposerBudget, "FundWithdrawRefuse")
+            .withArgs(proposalID);
 
         // 6 hours passed
         await network.provider.send("evm_increaseTime", [21600]);
         await network.provider.send("evm_mine");
 
         // allow funding
-        await expect(commonsBudget.allowFunding(proposalID)).to.emit(proposerBudget, "FundWithdrawAllow").withArgs(proposalID);
+        await expect(commonsBudget.allowFunding(proposalID))
+            .to.emit(proposerBudget, "FundWithdrawAllow")
+            .withArgs(proposalID);
 
         // 6 hours passed(= 24 hours passed after vote counting)
         await network.provider.send("evm_increaseTime", [21600]);

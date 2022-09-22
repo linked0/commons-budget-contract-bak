@@ -247,8 +247,7 @@ contract CommonsStorage is ICommonsStorage {
         }
         // Check if it has sufficient number of positive votes
         else if (
-            voteResult[1] <= voteResult[2] ||
-            ((voteResult[1] - voteResult[2]) * 100) / voteCount < approvalDiffPercent
+            voteResult[1] <= voteResult[2] || ((voteResult[1] - voteResult[2]) * 100) / voteCount < approvalDiffPercent
         ) {
             proposalMaps[_proposalID].proposalResult = ICommonsBudget.ProposalResult.REJECTED;
         } else {
@@ -257,8 +256,7 @@ contract CommonsStorage is ICommonsStorage {
 
         if (proposalMaps[_proposalID].proposalResult == ICommonsBudget.ProposalResult.APPROVED) {
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }
