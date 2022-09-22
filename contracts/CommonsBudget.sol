@@ -112,6 +112,14 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
         return owner() == account;
     }
 
+    /// @notice transfer ownership of the contract to a new account (newOwner).
+    ///     Can only be called by the current owner.
+    /// @param newOwner the address of the new owner
+    function transferOwnership(address newOwner) public override onlyOwner {
+        _transferOwnership(newOwner);
+        storageContract.transferOwnership(newOwner);
+    }
+
     function getStorageContractAddress() external view returns (address contractAddress) {
         return address(storageContract);
     }

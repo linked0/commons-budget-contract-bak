@@ -57,6 +57,13 @@ contract CommonsStorage is ICommonsStorage {
         voteFeeDistribCount = 100;
     }
 
+    /// @notice transfer ownership of the contract to a new account (newOwner).
+    ///     Can only be called by the current owner.
+    /// @param newOwner the address of the new owner
+    function transferOwnership(address newOwner) public onlyCommonsBudget {
+        owner = newOwner;
+    }
+
     // Proposal Fee = Funding amount * _value / 1000
     function setFundProposalFeePermil(uint32 _value) external override onlyOwner {
         fundProposalFeePermil = _value;
