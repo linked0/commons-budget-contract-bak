@@ -27,6 +27,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     event Received(address, uint256);
 
     CommonsStorage storageContract;
+    address public manager;
 
     mapping(bytes32 => ICommonsBudget.ProposalFeeData) internal feeMaps;
 
@@ -36,6 +37,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
 
     constructor() {
         storageContract = new CommonsStorage(msg.sender, address(this));
+        manager = msg.sender;
     }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
@@ -43,6 +45,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
             interfaceId == this.supportsInterface.selector ||
             interfaceId ==
             this.isOwner.selector ^
+                this.setManager.selector ^
                 this.createSystemProposal.selector ^
                 this.createFundProposal.selector ^
                 this.assessProposal.selector ^
@@ -118,6 +121,12 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     function transferOwnership(address newOwner) public override onlyOwner {
         _transferOwnership(newOwner);
         storageContract.transferOwnership(newOwner);
+    }
+
+    /// @notice change the manager of the contract to a new account
+    /// @param newManager the address of the new manager
+    function setManager(address newManager) external override onlyOwner {
+        manager = newManager;
     }
 
     function getStorageContractAddress() external view returns (address contractAddress) {

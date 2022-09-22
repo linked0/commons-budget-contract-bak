@@ -1,4 +1,4 @@
-import chai, { expect } from "chai";
+import chai, { assert, expect } from "chai";
 import crypto from "crypto";
 import { solidity } from "ethereum-waffle";
 import { BigNumber, BigNumberish, BytesLike, utils, Wallet } from "ethers";
@@ -136,6 +136,22 @@ describe("Test for the change of the owner or the manager", () => {
         // allow funding
         await expect(commonsBudget.allowFunding(proposalID)).to.revertedWith("Ownable: caller is not the owner");
         await commonsBudget.connect(admin).refuseFunding(proposalID);
+
+        // reset the ownership of the CommonsBudget to deployer for the next test
+        await commonsBudget.connect(admin).transferOwnership(deployer.address);
+    });
+
+    it("Change the manager of the CommonsBudget", async () => {
+        await commonsBudget.setManager(manager.address);
+        const storedManager = await commonsBudget.manager();
+        assert.deepStrictEqual(storedManager, manager.address);
+
+        // transfer the ownership to admin
+        await commonsBudget.transferOwnership(admin.address);
+
+        // set new manager
+        await commonsBudget.connect(admin).setManager(validators[0].address);
+        expect(await commonsBudget.manager()).to.equal(validators[0].address);
 
         // reset the ownership of the CommonsBudget to deployer for the next test
         await commonsBudget.connect(admin).transferOwnership(deployer.address);

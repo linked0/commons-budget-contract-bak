@@ -88,6 +88,10 @@ interface ICommonsBudget {
     /// @return return `true` if the `account` is owner
     function isOwner(address account) external view returns (bool);
 
+    /// @notice change the manager of the contract to a new account
+    /// @param newManager the address of the new manager
+    function setManager(address newManager) external;
+
     /// @notice create system proposal
     /// @param proposalID id of proposal
     /// @param proposalInput input data of proposal
