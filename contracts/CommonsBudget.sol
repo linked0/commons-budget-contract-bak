@@ -55,6 +55,11 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
                 this.withdraw.selector;
     }
 
+    modifier onlyManager() {
+        require(msg.sender == manager, "NotAuthorized");
+        _;
+    }
+
     modifier onlyInvalidProposal(bytes32 _proposalID) {
         ProposalData memory proposalData = storageContract.getProposalData(_proposalID);
         require(proposalData.state == ICommonsBudget.ProposalStates.INVALID, "AlreadyExistProposal");
@@ -273,7 +278,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @param _proposalID id of proposal
     /// @param _start the start index of validators that
     ///     is to receive a vote fee.
-    function distributeVoteFees(bytes32 _proposalID, uint256 _start) external override onlyOwner {
+    function distributeVoteFees(bytes32 _proposalID, uint256 _start) external override onlyManager {
         require(canDistributeVoteFees(_proposalID));
 
         ProposalData memory proposalData = storageContract.getProposalData(_proposalID);

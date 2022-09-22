@@ -156,4 +156,47 @@ describe("Test for the change of the owner or the manager", () => {
         // reset the ownership of the CommonsBudget to deployer for the next test
         await commonsBudget.connect(admin).transferOwnership(deployer.address);
     });
+
+    it("Distribute vote fees by new manager", async () => {
+        await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
+        const proposalData = await commonsBudget.getProposalData(proposalID);
+        const startTime = proposalData.start;
+        const endTime = proposalData.end;
+        const openTime = endTime.add(30);
+
+        await voteraVote.setupVoteInfo(proposalID, startTime, endTime, openTime, "info");
+        await voteraVote.addValidators(
+            proposalID,
+            validators.map((v) => v.address),
+            true
+        );
+
+        // change the manager
+        await commonsBudget.setManager(manager.address);
+
+        // fail: distribute vote fess to validators with the deployer address
+        const adminSigner = provider.getSigner(admin.address);
+        const maxCountDist = (await commonsStorage.voteFeeDistribCount()).toNumber();
+        const distCallCount = validators.length / maxCountDist;
+        for (let i = 0; i < distCallCount; i += 1) {
+            const start = i * maxCountDist;
+            await expect(commonsBudget.distributeVoteFees(proposalID, start)).to.be.revertedWith("NotAuthorized");
+        }
+
+        // fail: distribute vote fess to validators with the admin address
+        for (let i = 0; i < distCallCount; i += 1) {
+            const start = i * maxCountDist;
+            await expect(commonsBudget.connect(admin).distributeVoteFees(proposalID, start)).to.be.revertedWith(
+                "NotAuthorized"
+            );
+            await network.provider.send("evm_mine");
+        }
+
+        // succeed: distribute vote fess to validators with the manager address
+        for (let i = 0; i < distCallCount; i += 1) {
+            const start = i * maxCountDist;
+            await commonsBudget.connect(manager).distributeVoteFees(proposalID, start);
+            await network.provider.send("evm_mine");
+        }
+    });
 });
