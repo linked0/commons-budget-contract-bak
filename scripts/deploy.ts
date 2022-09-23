@@ -16,6 +16,7 @@ async function main() {
     const adminSigner = providerEthnet.getSigner(admin.address);
     const commonsBudget = await commonsBudgetFactory.connect(adminSigner).deploy();
     await commonsBudget.deployed();
+    const blockDeployed = await ethers.provider.getBlock("latest");
 
     const voteManager = new Wallet(process.env.VOTE_KEY || "");
     const voteManagerSigner = providerEthnet.getSigner(voteManager.address);
@@ -25,7 +26,7 @@ async function main() {
     await commonsBudget.changeVoteParam(voteManager.address, voteraVote.address);
     await voteraVote.changeCommonBudgetContract(commonsBudget.address);
 
-    console.log("commonsBudget - deployed to:", commonsBudget.address);
+    console.log("commonsBudget - deployed to:", commonsBudget.address, ", block: ", blockDeployed.number);
     console.log("voteraVote    - deployed to:", voteraVote.address);
     if (!process.env.VOTE_KEY) {
         console.log("voteraVote.manager - privateKey:", voteManager.privateKey);
