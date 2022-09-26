@@ -62,7 +62,7 @@ contract VoteraVote is Ownable, IVoteraVote {
     struct Ballot {
         address key;
         Candidate choice;
-        uint64 nonce;
+        uint256 nonce;
         bytes32 commitment;
     }
     struct BallotMap {
@@ -379,7 +379,7 @@ contract VoteraVote is Ownable, IVoteraVote {
         bytes32 _proposalID,
         address[] calldata _validators,
         Candidate[] calldata _choices,
-        uint64[] calldata _nonces
+        uint256[] calldata _nonces
     ) external onlyOwner {
         require(
             voteInfos[_proposalID].state != VoteState.INVALID &&

@@ -52,7 +52,7 @@ export function makeCommitment(
     nonce: number
 ): Promise<string> {
     const encodedResult = ethers.utils.defaultAbiCoder.encode(
-        ["bytes32", "address", "uint8", "uint64"],
+        ["bytes32", "address", "uint8", "uint256"],
         [proposalID, sender, choice, nonce]
     );
     return Promise.resolve(ethers.utils.keccak256(encodedResult));
