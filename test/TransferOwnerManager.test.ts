@@ -142,6 +142,7 @@ describe("Test for the change of the owner or the manager", () => {
     });
 
     it("Change the manager of the CommonsBudget", async () => {
+        const oldManager = await commonsBudget.manager();
         await commonsBudget.setManager(manager.address);
         const storedManager = await commonsBudget.manager();
         assert.deepStrictEqual(storedManager, manager.address);
@@ -152,6 +153,8 @@ describe("Test for the change of the owner or the manager", () => {
         // set new manager
         await commonsBudget.connect(admin).setManager(validators[0].address);
         expect(await commonsBudget.manager()).to.equal(validators[0].address);
+        expect(await commonsBudget.isManager(validators[0].address)).equal(true);
+        expect(await commonsBudget.isManager(oldManager)).equal(false);
 
         // reset the ownership of the CommonsBudget to deployer for the next test
         await commonsBudget.connect(admin).transferOwnership(deployer.address);

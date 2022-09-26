@@ -88,6 +88,11 @@ interface ICommonsBudget {
     /// @return return `true` if the `account` is owner
     function isOwner(address account) external view returns (bool);
 
+    /// @notice check if an address is the manager of the contract
+    /// @param account the address to be checked
+    /// @return return `true` if the `account` is the manager
+    function isManager(address account) external view returns (bool);
+
     /// @notice change the manager of the contract to a new account
     /// @param newManager the address of the new manager
     function setManager(address newManager) external;

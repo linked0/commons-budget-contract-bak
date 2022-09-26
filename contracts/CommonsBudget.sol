@@ -45,6 +45,7 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
             interfaceId == this.supportsInterface.selector ||
             interfaceId ==
             this.isOwner.selector ^
+                this.isManager.selector ^
                 this.setManager.selector ^
                 this.createSystemProposal.selector ^
                 this.createFundProposal.selector ^
@@ -118,6 +119,13 @@ contract CommonsBudget is Ownable, IERC165, ICommonsBudget {
     /// @return return `true` if the `account` is owner
     function isOwner(address account) external view override returns (bool) {
         return owner() == account;
+    }
+
+    /// @notice check if an address is the manager of the contract
+    /// @param account the address to be checked
+    /// @return return `true` if the `account` is the manager
+    function isManager(address account) external view override returns (bool) {
+        return (account == manager);
     }
 
     /// @notice transfer ownership of the contract to a new account (newOwner).
