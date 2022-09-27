@@ -49,7 +49,7 @@ export function makeCommitment(
     proposalID: string,
     sender: string,
     choice: number,
-    nonce: number
+    nonce: BigNumberish
 ): Promise<string> {
     const encodedResult = ethers.utils.defaultAbiCoder.encode(
         ["bytes32", "address", "uint8", "uint256"],
