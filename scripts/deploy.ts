@@ -24,7 +24,7 @@ async function main() {
     const blockDeployed = await ethers.provider.getBlock("latest");
 
     const voteManager = new Wallet(process.env.VOTE_KEY || "");
-    const voteManagerSigner = new NonceManager(new GasPriceManager(provider.getSigner(admin.address)));
+    const voteManagerSigner = new NonceManager(new GasPriceManager(provider.getSigner(voteManager.address)));
     const voteraVote = await voteraVoteFactory.connect(voteManagerSigner).deploy();
     await voteraVote.deployed();
     const blockDeployed2 = await ethers.provider.getBlock("latest");
