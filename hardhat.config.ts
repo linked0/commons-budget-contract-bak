@@ -37,10 +37,8 @@ function getAccounts() {
             balance: defaultBalance,
         });
     }
-    accounts[0].privateKey =
-        process.env.ADMIN_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-    accounts[1].privateKey =
-        process.env.USER_KEY || "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a";
+    accounts[0].privateKey = process.env.ADMIN_KEY || "";
+    accounts[1].privateKey = process.env.USER_KEY || "";
 
     return accounts;
 }
@@ -68,22 +66,22 @@ const config: HardhatUserConfig = {
         },
         mainnet: {
             url: process.env.MAINNET_URL || "",
-            chainId: 2022,
-            accounts: [process.env.ADMIN_KEY || "", process.env.USER_KEY || ""],
-            gas: 2100000,
-            gasPrice: 8000000000,
-        },
-        devnet: {
-            url: process.env.DEVNET_URL || "",
-            chainId: 2155,
-            accounts: [process.env.ADMIN_KEY || "", process.env.USER_KEY || ""],
+            chainId: 2151,
+            accounts: [process.env.ADMIN_KEY || "", process.env.VOTE_KEY || "", process.env.USER_KEY || ""],
             gas: 2100000,
             gasPrice: 8000000000,
         },
         testnet: {
             url: process.env.TESTNET_URL || "",
             chainId: 2019,
-            accounts: [process.env.ADMIN_KEY || "", process.env.USER_KEY || ""],
+            accounts: [process.env.ADMIN_KEY || "", process.env.VOTE_KEY || "", process.env.USER_KEY || ""],
+            gas: 2100000,
+            gasPrice: 8000000000,
+        },
+        devnet: {
+            url: process.env.DEVNET_URL || "",
+            chainId: 2155,
+            accounts: [process.env.ADMIN_KEY || "", process.env.VOTE_KEY || "", process.env.USER_KEY || ""],
             gas: 2100000,
             gasPrice: 8000000000,
         },
