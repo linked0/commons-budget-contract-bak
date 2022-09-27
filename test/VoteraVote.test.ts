@@ -11,7 +11,7 @@ import {
     CommonsStorage__factory as CommonsStorageFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
-} from "../typechain";
+} from "../typechain-types";
 import { makeCommitment, signCommitment, signFundProposal, signSystemProposal } from "./VoteHelper";
 
 const AddressZero = "0x0000000000000000000000000000000000000000";

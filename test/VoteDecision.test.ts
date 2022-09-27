@@ -10,7 +10,7 @@ import {
     CommonsStorage__factory as CommonsStorageFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
-} from "../typechain";
+} from "../typechain-types";
 import {
     createFundProposal,
     createSystemProposal,

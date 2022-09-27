@@ -11,7 +11,7 @@ import {
     CommonsStorage__factory as CommonsStorageFactory,
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
-} from "../typechain";
+} from "../typechain-types";
 
 function toSystemInput(title: string, start: number, end: number, docHash: BytesLike) {
     return { start, end, startAssess: 0, endAssess: 0, docHash, amount: 0, title };
