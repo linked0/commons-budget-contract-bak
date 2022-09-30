@@ -10,7 +10,7 @@ import * as fs from "fs";
 import { ethers } from "hardhat";
 import { join } from "path";
 import { start } from "repl";
-import {assessProposal} from "../test/VoteHelper";
+import { assessProposal } from "../test/VoteHelper";
 import { CommonsBudget__factory as CommonsBudgetFactory } from "../typechain-types";
 import { GasPriceManager } from "../utils/GasPriceManager";
 
@@ -69,33 +69,68 @@ async function main() {
     const valCount = await voteraVote.getValidatorCount(proposalID);
     console.log("Validator count: ", valCount);
     switch (proposalData.state) {
-        case 0: console.log ("Proposal state: INVALID"); break;
-        case 1: console.log ("Proposal state: CREATED"); break;
-        case 2: console.log ("Proposal state: REJECTED"); break;
-        case 3: console.log ("Proposal state: ACCEPTED"); break;
-        case 4: console.log ("Proposal state: FINISHED"); break;
-        default: console.log ("Proposal state: ABNORMAL STATE");
+        case 0:
+            console.log("Proposal state: INVALID");
+            break;
+        case 1:
+            console.log("Proposal state: CREATED");
+            break;
+        case 2:
+            console.log("Proposal state: REJECTED");
+            break;
+        case 3:
+            console.log("Proposal state: ACCEPTED");
+            break;
+        case 4:
+            console.log("Proposal state: FINISHED");
+            break;
+        default:
+            console.log("Proposal state: ABNORMAL STATE");
     }
     switch (proposalData.proposalResult) {
-        case 0: console.log ("Proposal result: NONE"); break;
-        case 1: console.log ("Proposal result: APPROVED"); break;
-        case 2: console.log ("Proposal result: REJECTED"); break;
-        case 3: console.log ("Proposal result: INVALID_QUORUM"); break;
-        case 4: console.log ("Proposal result: ASSESSMENT_FAILED"); break;
-        default: console.log ("Proposal result: ABNORMAL STATE");
+        case 0:
+            console.log("Proposal result: NONE");
+            break;
+        case 1:
+            console.log("Proposal result: APPROVED");
+            break;
+        case 2:
+            console.log("Proposal result: REJECTED");
+            break;
+        case 3:
+            console.log("Proposal result: INVALID_QUORUM");
+            break;
+        case 4:
+            console.log("Proposal result: ASSESSMENT_FAILED");
+            break;
+        default:
+            console.log("Proposal result: ABNORMAL STATE");
     }
 
     // votera vote information
     const voteInfo = await voteraVote.voteInfos(proposalID);
     console.log("========== Vote information ==========");
     switch (voteInfo.state) {
-        case 0: console.log ("state: INVALID"); break;
-        case 1: console.log ("state: CREATED"); break;
-        case 2: console.log ("state: SETTING"); break;
-        case 3: console.log ("state: ASSESSING"); break;
-        case 4: console.log ("state: RUNNING"); break;
-        case 5: console.log ("state: FINISHED"); break;
-        default: console.log ("state: ABNORMAL STATE");
+        case 0:
+            console.log("state: INVALID");
+            break;
+        case 1:
+            console.log("state: CREATED");
+            break;
+        case 2:
+            console.log("state: SETTING");
+            break;
+        case 3:
+            console.log("state: ASSESSING");
+            break;
+        case 4:
+            console.log("state: RUNNING");
+            break;
+        case 5:
+            console.log("state: FINISHED");
+            break;
+        default:
+            console.log("state: ABNORMAL STATE");
     }
     console.log("openVote: ", new Date(Number(voteInfo.openVote) * 1000).toLocaleString());
     console.log("Assess count: ", await voteraVote.getAssessCount(proposalID));

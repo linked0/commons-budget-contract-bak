@@ -1,5 +1,5 @@
 /* eslint-disable no-underscore-dangle */
-import {NonceManager} from "@ethersproject/experimental";
+import { NonceManager } from "@ethersproject/experimental";
 import { expect } from "chai";
 import crypto from "crypto";
 import { MockProvider } from "ethereum-waffle";
@@ -13,7 +13,7 @@ import {
     VoteraVote,
     VoteraVote__factory as VoteraVoteFactory,
 } from "../typechain-types";
-import {GasPriceManager} from "./GasPriceManager";
+import { GasPriceManager } from "./GasPriceManager";
 
 function toSystemInput(title: string, start: number, end: number, docHash: BytesLike) {
     return { start, end, startAssess: 0, endAssess: 0, docHash, amount: 0, title };
@@ -22,7 +22,13 @@ function toSystemInput(title: string, start: number, end: number, docHash: Bytes
 export async function displayBalance(address: string, addressName: string) {
     const proposerBalance = BigNumber.from(await ethers.provider.getBalance(address));
     const cent = BigNumber.from(10).pow(18);
-    console.log(addressName, "balance: ", proposerBalance.div(cent).toString(), ".", proposerBalance.mod(cent).toString());
+    console.log(
+        addressName,
+        "balance: ",
+        proposerBalance.div(cent).toString(),
+        ".",
+        proposerBalance.mod(cent).toString()
+    );
 }
 
 export async function getSigners(): Promise<NonceManager[]> {
@@ -40,8 +46,7 @@ export async function getValidators() {
     return vals;
 }
 
-export function generateVoteData(positive: number, negative: number, blank: number)
-    : [number[], BigNumber[]] {
+export function generateVoteData(positive: number, negative: number, blank: number): [number[], BigNumber[]] {
     const voterCount = positive + negative + blank;
 
     // setup votes
