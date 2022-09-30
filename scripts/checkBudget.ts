@@ -6,7 +6,7 @@
 
 import chai, { assert, expect } from "chai";
 import fs from "fs";
-import {join} from "path";
+import { join } from "path";
 import { GasPriceManager } from "../utils/GasPriceManager";
 
 import { BigNumber, Wallet } from "ethers";
@@ -28,7 +28,9 @@ async function main() {
 
     // CommonsBudget balance
     console.log(
-        "CommonsBudget (", commonsBudget.address, ") :",
+        "CommonsBudget (",
+        commonsBudget.address,
+        ") :",
         commonsBalance.div(cent).toString(),
         ".",
         commonsBalance.mod(cent).toString()
@@ -36,12 +38,21 @@ async function main() {
 
     // Admin balance
     const adminBalance = BigNumber.from(await ethers.provider.getBalance(admin.address));
-    console.log("Admin         (", admin.address, ") :", adminBalance.div(cent).toString(), ".", adminBalance.mod(cent).toString());
+    console.log(
+        "Admin         (",
+        admin.address,
+        ") :",
+        adminBalance.div(cent).toString(),
+        ".",
+        adminBalance.mod(cent).toString()
+    );
 
     // Manager balance
     const managerBalance = BigNumber.from(await ethers.provider.getBalance(manager.address));
     console.log(
-        "Manager       (", manager.address, ") :",
+        "Manager       (",
+        manager.address,
+        ") :",
         managerBalance.div(cent).toString(),
         ".",
         managerBalance.mod(cent).toString()
@@ -49,12 +60,21 @@ async function main() {
 
     // Votera balance
     const voteraBalance = BigNumber.from(await ethers.provider.getBalance(voteManager.address));
-    console.log("Votera        (", voteManager.address, ") :", voteraBalance.div(cent).toString(), ".", voteraBalance.mod(cent).toString());
+    console.log(
+        "Votera        (",
+        voteManager.address,
+        ") :",
+        voteraBalance.div(cent).toString(),
+        ".",
+        voteraBalance.mod(cent).toString()
+    );
 
     // Proposal balance
     const proposerBalance = BigNumber.from(await ethers.provider.getBalance(proposer.address));
     console.log(
-        "Proposal      (", proposer.address, ") :",
+        "Proposal      (",
+        proposer.address,
+        ") :",
         proposerBalance.div(cent).toString(),
         ".",
         proposerBalance.mod(cent).toString()
