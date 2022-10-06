@@ -18,7 +18,9 @@ async function main() {
     const voteraVote = await voteraVoteFactory.attach(process.env.VOTERA_VOTE_CONTRACT || "");
 
     await commonsBudget.connect(adminSigner).changeVoteParam(voteManager.address, voteraVote.address);
+    console.log("changeVoteParam - voteManager:", voteManager.address, ", voteraVote:", voteraVote.address);
     await voteraVote.connect(voteManagerSigner).changeCommonBudgetContract(commonsBudget.address);
+    console.log("changeCommonBudgetContract - commonsBudget:", commonsBudget.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
