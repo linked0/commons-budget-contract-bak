@@ -7,7 +7,7 @@
 import chai, { assert, expect } from "chai";
 import { GasPriceManager } from "../utils/GasPriceManager";
 
-import {BigNumber, Wallet} from "ethers";
+import { BigNumber, Wallet } from "ethers";
 import { ethers } from "hardhat";
 
 import { NonceManager } from "@ethersproject/experimental";
@@ -25,11 +25,21 @@ async function main() {
     const cent = BigNumber.from(10).pow(18);
     const commonsBalance = BigNumber.from(await ethers.provider.getBalance(commonsBudget.address));
     console.log("========== Format: {BOA} . {CENT} ==========");
-    console.log("CommonsBudget balance: ", commonsBalance.div(cent).toString(), ".", commonsBalance.mod(cent).toString());
+    console.log(
+        "CommonsBudget balance: ",
+        commonsBalance.div(cent).toString(),
+        ".",
+        commonsBalance.mod(cent).toString()
+    );
     const adminBalance = BigNumber.from(await ethers.provider.getBalance(adminWallet.address));
     console.log("Admin         balance: ", adminBalance.div(cent).toString(), ".", adminBalance.mod(cent).toString());
     const managerBalance = BigNumber.from(await ethers.provider.getBalance(managerWallet.address));
-    console.log("Manager       balance: ", managerBalance.div(cent).toString(), ".", managerBalance.mod(cent).toString());
+    console.log(
+        "Manager       balance: ",
+        managerBalance.div(cent).toString(),
+        ".",
+        managerBalance.mod(cent).toString()
+    );
     const voteraBalance = BigNumber.from(await ethers.provider.getBalance(voteraWallet.address));
     console.log("Votera        balance: ", voteraBalance.div(cent).toString(), ".", voteraBalance.mod(cent).toString());
 }
