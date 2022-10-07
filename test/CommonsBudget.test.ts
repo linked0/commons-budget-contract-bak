@@ -182,6 +182,12 @@ describe("Test of Commons Budget Contract", () => {
         assert.deepStrictEqual(voterFee.toNumber(), 300000000000000);
     });
 
+    it("Set Withdraw Delay Period", async () => {
+        await storageContract.connect(adminSigner).setWithdrawDelayPeriod(3600);
+        const withdrawDelayPeriod = await storageContract.withdrawDelayPeriod();
+        assert.deepStrictEqual(withdrawDelayPeriod, 3600);
+    });
+
     it("changeVoteParam", async () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         const testContract = await commonsBudgetFactory.deploy();

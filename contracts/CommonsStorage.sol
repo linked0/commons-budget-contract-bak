@@ -30,6 +30,11 @@ contract CommonsStorage is ICommonsStorage {
     // in a voting, which is a voter. Its unit is cent of BOA.
     uint256 public voterFee;
 
+    // It is a delay period to keep a proposer from withdrawing
+    // the fund after an approval of the proposer's fund proposal.
+    // It is set by the second.
+    uint32 public withdrawDelayPeriod;
+
     // The max count of validators that CommonsBudget can distribute
     // vote fess to in an attempt of distribution.
     uint256 public voteFeeDistribCount;
@@ -54,6 +59,7 @@ contract CommonsStorage is ICommonsStorage {
         systemProposalFee = 100000000000000000000;
         voteQuorumFactor = 333333; // Number of validators / 3
         voterFee = 400000000000000;
+        withdrawDelayPeriod = 86400;
         voteFeeDistribCount = 100;
     }
 
@@ -82,6 +88,10 @@ contract CommonsStorage is ICommonsStorage {
 
     function setVoterFee(uint256 _value) external override onlyOwner {
         voterFee = _value;
+    }
+
+    function setWithdrawDelayPeriod(uint32 _value) external override onlyOwner {
+        withdrawDelayPeriod = _value;
     }
 
     modifier onlyOwner() {
@@ -270,7 +280,10 @@ contract CommonsStorage is ICommonsStorage {
 
     function setFundingAllowed(bytes32 _proposalID, bool allow) external onlyCommonsBudget {
         require(proposalMaps[_proposalID].fundWithdrawn == false, "W09");
-        require(allow == true || block.timestamp - proposalMaps[_proposalID].countingFinishTime < 86400, "InvalidTime");
+        require(
+            allow == true || block.timestamp - proposalMaps[_proposalID].countingFinishTime < withdrawDelayPeriod,
+            "InvalidTime"
+        );
 
         proposalMaps[_proposalID].fundingAllowed = allow;
     }
@@ -294,7 +307,7 @@ contract CommonsStorage is ICommonsStorage {
             stateCode = "W05";
         } else if (_proposalData.proposalResult != ICommonsBudget.ProposalResult.APPROVED) {
             stateCode = "W06";
-        } else if (block.timestamp - _proposalData.countingFinishTime < 86400) {
+        } else if (block.timestamp - _proposalData.countingFinishTime < withdrawDelayPeriod) {
             stateCode = "W07";
         } else if (_proposalData.fundingAllowed == false) {
             stateCode = "W08";
