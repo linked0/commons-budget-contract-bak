@@ -32,30 +32,14 @@ async function main() {
     const proposalID = process.env.FUND_PROPOSAL_ID || "";
     console.log("Current proposal ID: ", proposalID);
 
-    const validator_count: number = Number(process.env.VALIDATOR_COUNT || "0");
-    const validators = vals.slice(0, validator_count);
-
-    const storageAddress = await commonsBudget.getStorageContractAddress();
-    const storageFactory = await ethers.getContractFactory("CommonsStorage");
-    const storageContract = await storageFactory.attach(storageAddress);
+    const proposalData = await commonsBudget.getProposalData(proposalID);
+    const startTime = proposalData.start;
+    const endTime = proposalData.end;
+    const openTime = endTime.add(30);
 
     const managerVoteraVote = voteraVote.connect(voteManagerSigner);
-    await managerVoteraVote.addValidators(
-        proposalID,
-        validators.map((v) => v.address),
-        true
-    );
-    console.log("addValidators finished!");
-
-    // distribute vote fess to validators
-    const managerCommons = commonsBudget.connect(managerSigner);
-    const maxCountDist = (await storageContract.voteFeeDistribCount()).toNumber();
-    const distCallCount = validators.length / maxCountDist;
-    for (let i = 0; i < distCallCount; i += 1) {
-        const start = i * maxCountDist;
-        console.log("calling distributeVoteFees from the start index of", start);
-        await managerCommons.distributeVoteFees(proposalID, start);
-    }
+    await managerVoteraVote.setupVoteInfo(proposalID, startTime, endTime, openTime, "info");
+    console.log("setupVoteInfo called for the proposal: ", proposalID);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
