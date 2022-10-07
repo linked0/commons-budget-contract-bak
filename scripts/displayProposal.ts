@@ -8,6 +8,7 @@ import crypto from "crypto";
 import { BigNumber, Wallet } from "ethers";
 import * as fs from "fs";
 import { ethers } from "hardhat";
+import common from "mocha/lib/interfaces/common";
 import { join } from "path";
 import { start } from "repl";
 import { assessProposal } from "../test/VoteHelper";
@@ -46,8 +47,27 @@ async function main() {
     const commonsBudget = await commonsBudgetFactory.attach(process.env.COMMONS_BUDGET_CONTRACT || "");
     const voteraVote = await voteraVoteFactory.attach(process.env.VOTERA_VOTE_CONTRACT || "");
 
+    const storageAddress = await commonsBudget.getStorageContractAddress();
+    const storageFactory = await ethers.getContractFactory("CommonsStorage");
+    const storageContract = await storageFactory.attach(storageAddress);
+
     const blockLatest = await ethers.provider.getBlock("latest");
     console.log("Current Height: ", blockLatest.number);
+
+    // Values related to the CommonsBudget policy
+    console.log("========== CommonsBudget Policy ==========");
+    console.log(
+        "fundProposalFeePermil:",
+        await storageContract.fundProposalFeePermil(),
+        ", systemProposalFee:",
+        (await storageContract.systemProposalFee()).toString(),
+        ", voteQuorumFactor:",
+        await storageContract.voteQuorumFactor(),
+        ", voterFee:",
+        (await storageContract.voterFee()).toString(),
+        ", withdrawDelayPeriod:",
+        await storageContract.withdrawDelayPeriod()
+    );
 
     // current proposal information from CommonsBudget
     const proposalID = process.env.FUND_PROPOSAL_ID || "";
