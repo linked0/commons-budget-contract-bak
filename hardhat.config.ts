@@ -74,6 +74,11 @@ const config: HardhatUserConfig = {
             chainId: 2019,
             accounts: [process.env.ADMIN_KEY || "", process.env.VOTE_KEY || "", process.env.USER_KEY || ""],
         },
+        votera: {
+            url: process.env.VOTERA_URL || "",
+            chainId: 34560,
+            accounts: [process.env.ADMIN_KEY || "", process.env.VOTE_KEY || "", process.env.USER_KEY || "", process.env.MANAGER_KEY || "", process.env.PROPOSER_KEY || "", process.env.VALIDATOR_KEY_0 || "", process.env.VALIDATOR_KEY_1 || "", process.env.VALIDATOR_KEY_2 || "", process.env.VALIDATOR_KEY_3 || "", process.env.VALIDATOR_KEY_4 || "", process.env.VALIDATOR_KEY_5 || "", process.env.VALIDATOR_KEY_6 || "", process.env.VALIDATOR_KEY_7 || "", process.env.VALIDATOR_KEY_8 || "", process.env.VALIDATOR_KEY_9 || "", process.env.VALIDATOR_KEY_10 || ""],
+        },
         devnet: {
             url: process.env.DEVNET_URL || "",
             chainId: 2155,
