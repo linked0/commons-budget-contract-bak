@@ -135,7 +135,7 @@ describe("Test of Commons Budget Contract", () => {
 
     it("Check Proposal Fee", async () => {
         const fundProposalFee = await storageContract.fundProposalFeePermil();
-        assert.deepStrictEqual(fundProposalFee.toString(), "10");
+        assert.deepStrictEqual(fundProposalFee.toString(), "1");
         const systemProposalFe = await storageContract.systemProposalFee();
         assert.deepStrictEqual(systemProposalFe.toString(), "100000000000000000000");
     });

@@ -58,7 +58,7 @@ contract CommonsStorage is ICommonsStorage {
     constructor(address _owner, address _budgetAddress) {
         owner = _owner;
         commonsBudgetAddress = _budgetAddress;
-        fundProposalFeePermil = 10;
+        fundProposalFeePermil = 1;
         systemProposalFee = 100000000000000000000;
         voteQuorumFactor = 333333; // Number of validators / 3
         voterFee = 400000000000000;
