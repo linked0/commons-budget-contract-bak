@@ -71,7 +71,7 @@ async function main() {
     const provider = ethers.provider;
     const [adminSigner, _, userSigner, managerSigner, proposerSigner] = await getSigners();
     const vals = await getValidators();
-    const basicFee = ethers.utils.parseEther("100.0");
+    const basicFee = ethers.utils.parseEther("10.0");
     const fundAmount = ethers.utils.parseEther("10000.0");
     const proposalID = getNewProposal();
     console.log("New Proposal ID: ", proposalID);
