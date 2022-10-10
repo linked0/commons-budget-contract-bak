@@ -43,6 +43,9 @@ contract CommonsStorage is ICommonsStorage {
     // and the net percentage of negative votes
     uint256 public constant approvalDiffPercent = 10;
 
+    // The max amount that admin can set for the vote fee.
+    uint256 public constant maxVoteFee = 10000000000000000000;
+
     mapping(bytes32 => ICommonsBudget.ProposalData) internal proposalMaps;
 
     /// @notice vote manager is votera vote server
@@ -87,6 +90,7 @@ contract CommonsStorage is ICommonsStorage {
     }
 
     function setVoterFee(uint256 _value) external override onlyOwner {
+        require(_value <= maxVoteFee, "InvalidInput");
         voterFee = _value;
     }
 

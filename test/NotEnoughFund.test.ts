@@ -62,7 +62,7 @@ describe("Test of Fund Withdrawal with not enough fund", () => {
     const { provider } = waffle;
     const [admin, voteManager, ...validators] = provider.getWallets();
     const adminSigner = provider.getSigner(admin.address);
-    const basicFee = ethers.utils.parseEther("100.0");
+    const basicFee = ethers.utils.parseEther("10.0");
     const fundAmount = ethers.utils.parseEther("10000.0");
 
     let proposalID: string;
@@ -107,7 +107,7 @@ describe("Test of Fund Withdrawal with not enough fund", () => {
         await createFundProposal(proposalID, proposer, DocHash, basicFee, fundAmount);
 
         // Set too much voter fee for insufficient funds
-        const voterFee = ethers.utils.parseEther("100.0");
+        const voterFee = ethers.utils.parseEther("10.0");
         await commonsStorage.setVoterFee(voterFee);
         await assessProposal(proposalID, true);
 

@@ -182,6 +182,12 @@ describe("Test of Commons Budget Contract", () => {
         assert.deepStrictEqual(voterFee.toNumber(), 300000000000000);
     });
 
+    it("Set Invalid Voter Fee", async () => {
+        // try to set vote fee more than 10 BOA
+        const voteFee = BigNumber.from(10).pow(18).mul(11);
+        await expect(storageContract.connect(adminSigner).setVoterFee(voteFee)).to.be.revertedWith("InvalidInput");
+    });
+
     it("Set Withdraw Delay Period", async () => {
         await storageContract.connect(adminSigner).setWithdrawDelayPeriod(3600);
         const withdrawDelayPeriod = await storageContract.withdrawDelayPeriod();
