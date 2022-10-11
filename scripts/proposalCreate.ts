@@ -87,13 +87,16 @@ async function main() {
     const voteraVote = await voteraVoteFactory.attach(process.env.VOTERA_VOTE_CONTRACT || "");
 
     // create fund proposal
+    const assessPeriod = Number(process.env.ASSESS_PERIOD || "0");
+    const voteWaitingPeriod = Number(process.env.VOTE_WAITING_PERIOD || "0");
+    const votePeriod = Number(process.env.VOTE_PERIOD || "0");
     const blockLatest = await ethers.provider.getBlock("latest");
     console.log("Current block - number: ", blockLatest.number, ", timestamp: ", blockLatest.timestamp);
     const title = "FundProposalTitle-2";
     const startAssess = blockLatest.timestamp;
-    const endAssess = startAssess + 180; // 3 minutes
-    const startTime = endAssess + 180;
-    const endTime = startTime + 600;
+    const endAssess = startAssess + assessPeriod;
+    const startTime = endAssess + voteWaitingPeriod;
+    const endTime = startTime + votePeriod;
 
     const signProposal = await signFundProposal(
         voteManager,
