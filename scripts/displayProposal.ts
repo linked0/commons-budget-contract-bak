@@ -75,16 +75,14 @@ async function main() {
     const mamager = await commonsBudget.manager();
     console.log("========== Proposal Information ==========");
     console.log("ID: ", proposalID);
-    let date = new Date(Number(proposalData.startAssess) * 1000);
-    console.log("Assess Start: ", date.toLocaleString());
-    date = new Date(Number(proposalData.endAssess) * 1000);
-    console.log("Assess   End: ", date.toLocaleString());
-    date = new Date(Number(proposalData.start) * 1000);
-    console.log("Vote   Start: ", date.toLocaleString());
-    date = new Date(Number(proposalData.end) * 1000);
-    console.log("Vote     End: ", date.toLocaleString());
-    date = new Date(Number(proposalData.countingFinishTime) * 1000);
-    console.log("Count Finish: ", date.toLocaleString());
+    let date1 = new Date(Number(proposalData.startAssess) * 1000);
+    let date2 = new Date(Number(proposalData.endAssess) * 1000);
+    console.log("Assess  Time:", date1.toLocaleString(), "~", date2.toLocaleString());
+    date1 = new Date(Number(proposalData.start) * 1000);
+    date2 = new Date(Number(proposalData.end) * 1000);
+    console.log("Vote    Time:", date1.toLocaleString(), "~", date2.toLocaleString());
+    date1 = new Date(Number(proposalData.countingFinishTime) * 1000);
+    console.log("Count Finish:", date1.toLocaleString());
 
     const valCount = await voteraVote.getValidatorCount(proposalID);
     console.log("Validator count: ", valCount);
