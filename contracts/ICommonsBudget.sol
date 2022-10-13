@@ -11,4 +11,8 @@ interface ICommonsBudget {
     /// @notice set the contract address to transfer budget
     /// @param contractAddress the address of the contract executing budget
     function setExecContract(address contractAddress) external;
+
+    /// @notice transfer fund to the address of the fund execution contract
+    /// @param amount the amount to be transferred
+    function transferFund(uint256 amount) external;
 }

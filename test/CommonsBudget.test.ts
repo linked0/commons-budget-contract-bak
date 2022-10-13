@@ -50,4 +50,19 @@ describe("Test of Commons Budget Contract", () => {
         await expect(contract.setExecContract(execContract.address)).
             to.emit(contract, "ExecContractSet").withArgs(execContract.address);
     });
+
+    it("Budget Transfer", async () => {
+        await provider.getSigner(admin.address).sendTransaction({
+            to: contract.address,
+            value: commonsFund,
+        });
+
+        const prevBalance: BigNumber = await provider.getBalance(execContract.address);
+        
+        const fund = BigNumber.from(10).pow(18).mul(10000);
+        await contract.transferFund(fund);
+        const curBalance: BigNumber = await provider.getBalance(execContract.address);
+        
+        expect(curBalance).equal(prevBalance.add(fund));
+    });
 });
