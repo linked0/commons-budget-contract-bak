@@ -8,12 +8,15 @@ import * as assert from "assert";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
+    FundExecution,
+    FundExecution__factory as FundExecutionFactory,
 } from "../typechain-types";
 
 chai.use(solidity);
 
 describe("Test of Commons Budget Contract", () => {
     let contract: CommonsBudget;
+    let execContract: CommonsBudget;
 
     const assessCount = 2;
     const passAssessResult = [7, 7, 7, 7, 7];
@@ -29,6 +32,10 @@ describe("Test of Commons Budget Contract", () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         contract = await commonsBudgetFactory.connect(admin).deploy();
         await contract.deployed();
+
+        const executionFactory = await ethers.getContractFactory("FundExecution");
+        execContract = await executionFactory.connect(admin).deploy();
+        await execContract.deployed();
     });
 
     beforeEach(() => {
@@ -37,5 +44,10 @@ describe("Test of Commons Budget Contract", () => {
     it("isOwner", async () => {
         expect(await contract.isOwner(admin.address)).equal(true);
         expect(await contract.isOwner(user.address)).equal(false);
+    });
+
+    it("setExecContract", async () => {
+        await expect(contract.setExecContract(execContract.address)).
+            to.emit(contract, "ExecContractSet").withArgs(execContract.address);
     });
 });
