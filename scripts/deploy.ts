@@ -13,7 +13,6 @@ import { NonceManager } from "@ethersproject/experimental";
 
 async function main() {
     const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-    const voteraVoteFactory = await ethers.getContractFactory("VoteraVote");
 
     const provider = ethers.provider;
 
