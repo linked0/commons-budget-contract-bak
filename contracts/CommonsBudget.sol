@@ -7,8 +7,10 @@ import "./ICommonsBudget.sol";
 
 contract CommonsBudget is IERC165, ICommonsBudget {
     event Received(address, uint256);
+    event DAOSet(address);
 
     address public owner;
+    address public daoContract;
 
     receive() external payable {
         emit Received(msg.sender, msg.value);
@@ -22,7 +24,13 @@ contract CommonsBudget is IERC165, ICommonsBudget {
         return
             interfaceId == this.supportsInterface.selector ||
             interfaceId ==
-            this.isOwner.selector;
+            this.isOwner.selector ^
+                this.setDAOContract.selector;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "NotAuthorized");
+        _;
     }
 
     /// @notice check if an address is the owner of the contract
@@ -30,5 +38,12 @@ contract CommonsBudget is IERC165, ICommonsBudget {
     /// @return return `true` if the `account` is owner
     function isOwner(address account) external view override returns (bool) {
         return owner == account;
+    }
+
+    /// @notice set DAO address to transfer budget
+    /// @param contractAddress the address of DAO contract
+    function setDAOContract(address contractAddress) external override onlyOwner {
+        daoContract = contractAddress;
+        emit DAOSet(contractAddress);
     }
 }

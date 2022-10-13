@@ -8,12 +8,15 @@ import * as assert from "assert";
 import {
     CommonsBudget,
     CommonsBudget__factory as CommonsBudgetFactory,
+    AgoraDAO,
+    AgoraDAO__factory as AgoraDAOFactory,
 } from "../typechain-types";
 
 chai.use(solidity);
 
 describe("Test of Commons Budget Contract", () => {
     let contract: CommonsBudget;
+    let daoContract: CommonsBudget;
 
     const assessCount = 2;
     const passAssessResult = [7, 7, 7, 7, 7];
@@ -29,6 +32,10 @@ describe("Test of Commons Budget Contract", () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         contract = await commonsBudgetFactory.connect(admin).deploy();
         await contract.deployed();
+
+        const agoraDAOFactory = await ethers.getContractFactory("AgoraDAO");
+        daoContract = await agoraDAOFactory.connect(admin).deploy();
+        await daoContract.deployed();
     });
 
     beforeEach(() => {
@@ -37,5 +44,10 @@ describe("Test of Commons Budget Contract", () => {
     it("isOwner", async () => {
         expect(await contract.isOwner(admin.address)).equal(true);
         expect(await contract.isOwner(user.address)).equal(false);
+    });
+
+    it("setDAOContract", async () => {
+        await expect(contract.setDAOContract(daoContract.address)).
+            to.emit(contract, "DAOSet").withArgs(daoContract.address);
     });
 });
