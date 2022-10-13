@@ -46,4 +46,12 @@ contract CommonsBudget is IERC165, ICommonsBudget {
         daoContract = contractAddress;
         emit DAOSet(contractAddress);
     }
+
+    /// @notice transfer budget to DAO address
+    /// @param amount the amount to be transferred
+    function transferBudget(uint256 amount) external override {
+        if (daoContract != address(0)) {
+            payable(daoContract).transfer(amount);
+        }
+    }
 }

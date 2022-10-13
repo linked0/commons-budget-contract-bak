@@ -50,4 +50,17 @@ describe("Test of Commons Budget Contract", () => {
         await expect(contract.setDAOContract(daoContract.address)).
             to.emit(contract, "DAOSet").withArgs(daoContract.address);
     });
+
+    it("Budget Transfer", async () => {
+        let balance: BigNumber = await provider.getBalance(daoContract.address);
+        console.log("DAO Balance:", balance);
+
+        await provider.getSigner(admin.address).sendTransaction({
+            to: contract.address,
+            value: commonsFund,
+        });
+
+        balance = await provider.getBalance(daoContract.address);
+        console.log("DAO Balance:", balance);
+    });
 });

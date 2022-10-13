@@ -11,4 +11,8 @@ interface ICommonsBudget {
     /// @notice set DAO address to transfer budget
     /// @param contractAddress the address of DAO contract
     function setDAOContract(address contractAddress) external;
+
+    /// @notice transfer budget to DAO address
+    /// @param amount the amount to be transferred
+    function transferBudget(uint256 amount) external;
 }
