@@ -66,4 +66,23 @@ describe("Test of Issued Contract", () => {
         // no one can call the setOwner due to the owner being zero address
         await expect(issuedContract.setOwner(user.address)).to.be.revertedWith("NotAuthorized");
     });
+
+    it("Request to transfer Budget", async () => {
+        // send money to the issued contract that is used for the commons budget
+        await provider.getSigner(admin.address).sendTransaction({
+            to: issuedContract.address,
+            value: commonsFund,
+        });
+        const prevBalance: BigNumber = await provider.getBalance(commonsBudget.address);
+
+        // request to transfer too many budget
+        await expect(issuedContract.transferBudget(commonsFund.mul(2))).to.be.revertedWith("NotEnoughBudget");
+
+        // request to transfer normal budget
+        const fund = BigNumber.from(10).pow(18).mul(10000);
+        await issuedContract.transferBudget(fund);
+        const curBalance: BigNumber = await provider.getBalance(commonsBudget.address);
+
+        expect(curBalance).equal(prevBalance.add(fund));
+    });
 });
