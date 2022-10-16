@@ -12,16 +12,15 @@ import { ethers } from "hardhat";
 import { NonceManager } from "@ethersproject/experimental";
 
 async function main() {
-    const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-
+    const issuedFactory = await ethers.getContractFactory("IssuedContract");
     const provider = ethers.provider;
 
     const admin = new Wallet(process.env.ADMIN_KEY || "");
     const adminSigner = new NonceManager(new GasPriceManager(provider.getSigner(admin.address)));
-    const commonsBudget = await commonsBudgetFactory.connect(adminSigner).deploy();
-    await commonsBudget.deployed();
+    const issued = await issuedFactory.connect(adminSigner).deploy();
+    await issued.deployed();
 
-    console.log("commonsBudget - deployed to:", commonsBudget.address);
+    console.log("IssuedContract - deployed to:", issued.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
