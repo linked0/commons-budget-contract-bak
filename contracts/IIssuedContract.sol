@@ -19,4 +19,8 @@ interface IIssuedContract {
     /// @notice set the address of the Commons Budget contract
     /// @param contractAddress the address of the Commons Budget contract
     function setCommonsBudget(address contractAddress) external;
+
+    /// @notice transfer budget to the commons budget contract
+    /// @param amount the amount to be transferred
+    function transferBudget(uint256 amount) external;
 }

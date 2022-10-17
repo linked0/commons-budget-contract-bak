@@ -25,7 +25,11 @@ contract IssuedContract is IERC165, IIssuedContract {
         return
         interfaceId == this.supportsInterface.selector ||
         interfaceId ==
-        this.isOwner.selector ^ this.getOwner.selector ^ this.setOwner.selector ^ this.setCommonsBudget.selector;
+        this.isOwner.selector ^
+            this.getOwner.selector ^
+            this.setOwner.selector ^
+            this.setCommonsBudget.selector ^
+            this.transferBudget.selector;
     }
 
     modifier onlyOwner() {
@@ -66,5 +70,14 @@ contract IssuedContract is IERC165, IIssuedContract {
     function setCommonsBudget(address contractAddress) external override onlyOwner isContract(contractAddress) {
         commonsBudget = contractAddress;
         emit CommonsBudgetContractSet(contractAddress);
+    }
+
+    /// @notice transfer fund to the address of the fund execution contract
+    /// @param amount the amount to be transferred
+    function transferBudget(uint256 amount) external override {
+        require(address(this).balance >= amount, "NotEnoughBudget");
+        if (commonsBudget != address(0)) {
+            payable(commonsBudget).transfer(amount);
+        }
     }
 }
