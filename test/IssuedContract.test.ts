@@ -34,6 +34,12 @@ describe("Test of Issued Contract", () => {
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
         commonsBudget = await commonsBudgetFactory.connect(admin).deploy();
         await commonsBudget.deployed();
+
+        // send money to the issued contract that is used for the commons budget
+        await provider.getSigner(admin.address).sendTransaction({
+            to: issuedContract.address,
+            value: commonsFund,
+        });
     });
 
     beforeEach(() => {});
@@ -68,11 +74,6 @@ describe("Test of Issued Contract", () => {
     });
 
     it("Request to transfer Budget", async () => {
-        // send money to the issued contract that is used for the commons budget
-        await provider.getSigner(admin.address).sendTransaction({
-            to: issuedContract.address,
-            value: commonsFund,
-        });
         const prevBalance: BigNumber = await provider.getBalance(commonsBudget.address);
 
         // request to transfer too many budget
@@ -81,6 +82,18 @@ describe("Test of Issued Contract", () => {
         // request to transfer normal budget
         const fund = BigNumber.from(10).pow(18).mul(10000);
         await issuedContract.transferBudget(fund);
+        const curBalance: BigNumber = await provider.getBalance(commonsBudget.address);
+
+        expect(curBalance).equal(prevBalance.add(fund));
+    });
+
+    it("Request to transfer Budget through CommonsBudget", async () => {
+        const prevBalance: BigNumber = await provider.getBalance(commonsBudget.address);
+
+        // request to transfer budget through the CommonsBudget contract
+        const fund = BigNumber.from(10).pow(18).mul(10000);
+        await commonsBudget.setIssuedContractAddress(issuedContract.address);
+        await commonsBudget.transferBudget(fund);
         const curBalance: BigNumber = await provider.getBalance(commonsBudget.address);
 
         expect(curBalance).equal(prevBalance.add(fund));
