@@ -1,5 +1,5 @@
 import { NonceManager } from "@ethersproject/experimental";
-import {BigNumber, Wallet } from "ethers";
+import { BigNumber, Wallet } from "ethers";
 import { ethers } from "hardhat";
 import { GasPriceManager } from "../utils/GasPriceManager";
 
@@ -12,7 +12,7 @@ async function main() {
     const adminSigner = new NonceManager(new GasPriceManager(provider.getSigner(admin.address)));
 
     const cent = BigNumber.from(10).pow(18);
-    const amount =  BigNumber.from(process.env.BUDGET_AMOUNT_BOA || 0).mul(cent);
+    const amount = BigNumber.from(process.env.BUDGET_AMOUNT_BOA || 0).mul(cent);
     console.log("amount: ", amount);
 
     const commonsBudget = await commonsBudgetFactory.attach(process.env.COMMONS_BUDGET_CONTRACT || "");

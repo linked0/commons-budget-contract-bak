@@ -4,12 +4,10 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 
-import { GasPriceManager } from "../utils/GasPriceManager";
-
+import { NonceManager } from "@ethersproject/experimental";
 import { Wallet } from "ethers";
 import { ethers } from "hardhat";
-
-import { NonceManager } from "@ethersproject/experimental";
+import { GasPriceManager } from "../utils/GasPriceManager";
 
 async function main() {
     const issuedFactory = await ethers.getContractFactory("IssuedContract");
