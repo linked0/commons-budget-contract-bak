@@ -1,18 +1,9 @@
 import * as dotenv from "dotenv";
-
-// tslint:disable-next-line:no-submodule-imports
 import { HardhatUserConfig, task } from "hardhat/config";
-// tslint:disable-next-line:no-submodule-imports
 import { HardhatNetworkAccountUserConfig } from "hardhat/types/config";
-
 import { utils, Wallet } from "ethers";
-
-import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
-import "hardhat-contract-sizer";
 import "hardhat-gas-reporter";
-import "solidity-coverage";
 
 dotenv.config({ path: "env/.env" });
 
