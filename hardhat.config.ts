@@ -75,6 +75,11 @@ const config: HardhatUserConfig = {
             chainId: 2155,
             accounts: [process.env.ADMIN_KEY || "", process.env.USER_KEY || ""],
         },
+        localnet: {
+            url: process.env.LOCALNET_URL || "",
+            chainId: 34559,
+            accounts: [process.env.ADMIN_KEY || "", process.env.USER_KEY || ""],
+        },
     },
     gasReporter: {
         enabled: process.env.REPORT_GAS !== undefined,
