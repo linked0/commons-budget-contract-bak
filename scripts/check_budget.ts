@@ -4,15 +4,8 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 
-import chai, { assert, expect } from "chai";
-import fs from "fs";
-import { join } from "path";
-import { GasPriceManager } from "../utils/GasPriceManager";
-
 import { BigNumber, Wallet } from "ethers";
 import { ethers } from "hardhat";
-
-import { NonceManager } from "@ethersproject/experimental";
 
 async function main() {
     const issuedFactory = await ethers.getContractFactory("IssuedContract");
@@ -21,11 +14,13 @@ async function main() {
     const issued = await issuedFactory.attach(process.env.ISSUED_CONTRACT || "");
     const commonsBudget = await commonsBudgetFactory.attach(process.env.COMMONS_BUDGET_CONTRACT || "");
     const admin = new Wallet(process.env.ADMIN_KEY || "");
+    const user = new Wallet(process.env.USER_KEY || "");
 
     const cent = BigNumber.from(10).pow(18);
     const issuedBalance = BigNumber.from(await ethers.provider.getBalance(issued.address));
     const commonsBalance = BigNumber.from(await ethers.provider.getBalance(commonsBudget.address));
     const adminBalance = BigNumber.from(await ethers.provider.getBalance(admin.address));
+    const userBalance = BigNumber.from(await ethers.provider.getBalance(user.address));
     console.log("========== Balance: {BOA} . {CENT} ==========");
 
     // IssuedContract balance
@@ -56,6 +51,16 @@ async function main() {
         adminBalance.div(cent).toString(),
         ".",
         adminBalance.mod(cent).toString()
+    );
+
+    // User balance
+    console.log(
+        "User Balance(",
+        user.address,
+        ") :",
+        userBalance.div(cent).toString(),
+        ".",
+        userBalance.mod(cent).toString()
     );
 }
 

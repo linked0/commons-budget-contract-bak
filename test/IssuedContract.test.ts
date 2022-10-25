@@ -1,18 +1,8 @@
 /* eslint-disable no-await-in-loop */
-import chai, { expect } from "chai";
-import crypto from "crypto";
-import { solidity } from "ethereum-waffle";
-import { BigNumber, BigNumberish, BytesLike, Wallet } from "ethers";
-import { ethers, network, waffle } from "hardhat";
-import * as assert from "assert";
-import {
-    IssuedContract,
-    IssuedContract__factory as IssuedContractFactory,
-    CommonsBudget,
-    CommonsBudget__factory as CommonsBudgetFactory,
-} from "../typechain-types";
-
-chai.use(solidity);
+import { expect } from "chai";
+import { BigNumber } from "ethers";
+import { ethers, waffle } from "hardhat";
+import { CommonsBudget, IssuedContract } from "../typechain-types";
 
 describe("Test of Issued Contract", () => {
     let issuedContract: IssuedContract;
@@ -21,24 +11,23 @@ describe("Test of Issued Contract", () => {
     const { provider } = waffle;
     const [admin, user] = provider.getWallets();
 
-    // set 1 million BOA for CommonsBudget contract
-    const commonsFund = BigNumber.from(10).pow(18).mul(1000000);
-    const adminSigner = provider.getSigner(admin.address);
+    // set 1 million BOA for the IssuedContract
+    const budget = BigNumber.from(10).pow(18).mul(1000000);
     const userSigner = provider.getSigner(user.address);
 
     before(async () => {
         const issuedContractFactory = await ethers.getContractFactory("IssuedContract");
-        issuedContract = await issuedContractFactory.connect(admin).deploy();
+        issuedContract = (await issuedContractFactory.connect(admin).deploy()) as IssuedContract;
         await issuedContract.deployed();
 
         const commonsBudgetFactory = await ethers.getContractFactory("CommonsBudget");
-        commonsBudget = await commonsBudgetFactory.connect(admin).deploy();
+        commonsBudget = (await commonsBudgetFactory.connect(admin).deploy()) as CommonsBudget;
         await commonsBudget.deployed();
 
         // send money to the issued contract that is used for the commons budget
         await provider.getSigner(admin.address).sendTransaction({
             to: issuedContract.address,
-            value: commonsFund,
+            value: budget,
         });
     });
 
@@ -77,7 +66,7 @@ describe("Test of Issued Contract", () => {
         const prevBalance: BigNumber = await provider.getBalance(commonsBudget.address);
 
         // request to transfer too many budget
-        await expect(issuedContract.transferBudget(commonsFund.mul(2))).to.be.revertedWith("NotEnoughBudget");
+        await expect(issuedContract.transferBudget(budget.mul(2))).to.be.revertedWith("NotEnoughBudget");
 
         // request to transfer normal budget
         const fund = BigNumber.from(10).pow(18).mul(10000);
